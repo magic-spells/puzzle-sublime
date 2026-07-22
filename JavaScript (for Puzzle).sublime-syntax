@@ -1,0 +1,50 @@
+%YAML 1.2
+---
+# JavaScript expression grammar used only inside Puzzle template braces.
+# Extending Sublime's native JavaScript grammar gives expressions the same
+# highlighting as a .js file while allowing Puzzle formatter pipes and range
+# loops to receive framework-specific scopes.
+scope: source.js.embedded.puzzle
+version: 2
+hidden: true
+
+extends: Packages/JavaScript/JavaScript.sublime-syntax
+
+contexts:
+  # Kept explicit for Sublime builds whose JavaScript package does not expose
+  # an expression-list entry point compatible with embedded syntaxes.
+  expressions:
+    - match: '(?=\S)'
+      push: [expression-end, expression-begin]
+
+  expression-begin:
+    - meta_prepend: true
+    # Native JavaScript accepts `1.` as a float, so without this guard it eats
+    # the first dot in Puzzle's `1...4` range before expression-end can see the
+    # range operator. Pop exactly like JavaScript's native number rules do.
+    - match: '{{dec_integer}}(?=\.\.\.)'
+      scope: meta.number.integer.decimal.js constant.numeric.value.js
+      pop: 1
+
+  expression-end:
+    - meta_prepend: true
+    # Puzzle's inclusive range form: {#for 1...5, n}
+    - match: '\.\.\.'
+      scope: keyword.operator.range.puzzle
+      push: expression-begin
+
+  binary-operators:
+    - meta_prepend: true
+    # A single pipe is a formatter boundary in Puzzle. Logical OR and |= stay
+    # under the native JavaScript grammar.
+    - match: '(?<!\|)\|(?![|=])'
+      scope: keyword.operator.formatter.puzzle
+      push: puzzle-formatter-name
+
+  puzzle-formatter-name:
+    - meta_include_prototype: false
+    - match: '\s*([_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*)'
+      captures:
+        1: variable.function.formatter.puzzle
+      pop: 1
+    - include: else-pop

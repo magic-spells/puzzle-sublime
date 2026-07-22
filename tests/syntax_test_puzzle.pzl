@@ -1,0 +1,217 @@
+## SYNTAX TEST "Puzzle.sublime-syntax"
+
+<puzzle-view class="shell">
+## ^^^^^^^^^^^ entity.name.tag.section.puzzle
+##            ^^^^^ entity.other.attribute-name.class.html
+
+  <article
+  ## ^^^^^^^ entity.name.tag.block.any.html
+    id="profile"
+    ## ^^ entity.other.attribute-name.id.html
+    data-user={ user.id }
+    ## ^^^^^^^^^ entity.other.attribute-name.html
+    ##           ^ punctuation.section.embedded.begin.puzzle
+    ##             ^^^^ source.js.embedded.puzzle
+    style="{#if visible}opacity:{ opacity };{/if} transform:translateX({ offset }px)">
+    ## ^^^^^ entity.other.attribute-name.style.html
+    ##       ^ punctuation.section.embedded.begin.puzzle
+    ##        ^ punctuation.definition.keyword.puzzle
+    ##         ^^ keyword.control.conditional.puzzle
+    ##                    ^^^^^^^ support.type.property-name.css
+    ##                            ^ punctuation.section.embedded.begin.puzzle
+    ##                              ^^^^^^^ source.js.embedded.puzzle
+
+    <!-- {#if examplesInComments} stays a comment {/if} -->
+    ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.block.html
+    ##      ^ - meta.embedded.block.puzzle
+
+    <ArtistCard @click:prevent:stop={ openArtist(artist, event) } />
+    ## ^^^^^^^^^^ entity.name.tag.component.puzzle
+    ##            ^ keyword.operator.event.puzzle
+    ##             ^^^^^ entity.other.attribute-name.event.puzzle
+    ##                  ^ punctuation.separator.modifier.puzzle
+    ##                   ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                          ^ punctuation.separator.modifier.puzzle
+    ##                           ^^^^ support.constant.event-modifier.puzzle
+    ##                                ^ punctuation.section.embedded.begin.puzzle
+
+    <button @click.prevent={ broken } @click:bogus={ alsoBroken }>
+    ##       ^ keyword.operator.event.puzzle
+    ##        ^^^^^ entity.other.attribute-name.event.puzzle
+    ##             ^^^^^^^^ invalid.illegal.event-modifier.puzzle
+    ##                                 ^ keyword.operator.event.puzzle
+    ##                                  ^^^^^ entity.other.attribute-name.event.puzzle
+    ##                                        ^ punctuation.separator.modifier.puzzle
+    ##                                         ^^^^^ invalid.illegal.event-modifier.puzzle
+      Open
+    </button>
+
+    {#if user.active && !user.suspended}
+    ## ^ punctuation.section.embedded.begin.puzzle
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^ keyword.control.conditional.puzzle
+    ##      ^^^^ source.js.embedded.puzzle
+    ##                  ^^ keyword.operator.logical.js
+      <strong>{ user.name | trim | capitalize }</strong>
+      ##        ^ punctuation.section.embedded.begin.puzzle
+      ##                    ^ keyword.operator.formatter.puzzle
+      ##                      ^^^^ variable.function.formatter.puzzle
+      ##                           ^ keyword.operator.formatter.puzzle
+      ##                             ^^^^^^^^^^ variable.function.formatter.puzzle
+    {:else if user.pending}
+    ## ^ punctuation.section.embedded.begin.puzzle
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^^ keyword.control.conditional.else.puzzle
+    ##        ^^ keyword.control.conditional.if.puzzle
+      <span>Pending</span>
+    {:else}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^^ keyword.control.conditional.else.puzzle
+      <span>Inactive</span>
+    {/if}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^ keyword.control.end.puzzle
+
+    {#unless hidden}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^^^^ keyword.control.conditional.puzzle
+      <span>Visible</span>
+    {/unless}
+    ##   ^^^^^^ keyword.control.end.puzzle
+
+    {#case status}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^^ keyword.control.conditional.puzzle
+      {:when 'playing', 'paused'}<span>{ status }</span>
+      ##  ^ punctuation.definition.keyword.puzzle
+      ##   ^^^^ keyword.control.conditional.puzzle
+      ##        ^^^^^^^^^ source.js.embedded.puzzle string.quoted.single.js
+      {:else}<span>Unknown</span>
+    {/case}
+    ##   ^^^^ keyword.control.end.puzzle
+
+    {#for track in tracks, i}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^ keyword.control.loop.puzzle
+    ##             ^^ keyword.operator.js
+      <span>{ i }: { track.title }</span>
+    {/for}
+    ##   ^^^ keyword.control.end.puzzle
+
+    {#for 1...4, n}<i>{ n }</i>{/for}
+    ##          ^ constant.numeric.value.js
+    ##        ^^^ keyword.operator.range.puzzle
+    ##              ^ constant.numeric.value.js
+    ##                                ^^^ keyword.control.end.puzzle
+
+    {#svg 'icons/heart.svg'}
+    ##  ^ punctuation.definition.keyword.puzzle
+    ##   ^^^ support.function.inline-svg.puzzle
+    ##       ^^^^^^^^^^^^^^^^^ string.quoted.single.js
+
+    <p title="Hello { user.name }">{ count || fallback }</p>
+    ##                ^ punctuation.section.embedded.begin.puzzle
+    ##                  ^^^^ source.js.embedded.puzzle
+    ##                                        ^^ keyword.operator.logical.js
+    ##                                        ^^ - keyword.operator.formatter.puzzle
+
+
+    ## --- Template comments (v1.37, D70) --- stripped by compiler, never parsed
+
+    {## a simple comment }
+##  ^^^ comment.block.template.puzzle
+##  ^ punctuation.definition.comment.begin.puzzle
+##        ^^^^^^ comment.block.template.puzzle
+##                       ^ punctuation.definition.comment.end.puzzle
+
+    {## don't { x } \} end }
+##         ^ comment.block.template.puzzle
+##            ^ comment.block.template.puzzle
+##                ^ comment.block.template.puzzle
+##                  ^^ comment.block.template.puzzle
+##                   ^ - punctuation.definition.comment.end.puzzle
+##                         ^ punctuation.definition.comment.end.puzzle
+
+    {#comment} { x } {#if a}z{/if} <!-- h --> {/comment}
+##  ^^^^^^^^^ comment.block.puzzle
+##  ^^^ punctuation.definition.comment.begin.puzzle
+##             ^^^^^ comment.block.puzzle
+##                     ^^ comment.block.puzzle
+##                     ^^ - keyword.control.conditional.puzzle
+##                                 ^^^^ comment.block.puzzle
+##                                            ^ punctuation.definition.comment.end.puzzle
+##                                                     ^ punctuation.definition.comment.end.puzzle
+
+    {#comment} outer {#comment} inner {/comment} outer {/comment}
+##  ^^^^^^^^^ comment.block.puzzle
+##                   ^^^^^^^^^ comment.block.puzzle
+##                   ^^^ punctuation.definition.comment.begin.puzzle
+##                              ^^^^^ comment.block.puzzle
+##                                    ^ punctuation.definition.comment.end.puzzle
+##                                               ^^^^^ comment.block.puzzle
+##                                                     ^ punctuation.definition.comment.end.puzzle
+
+    {#comment note} body {/ comment }
+##  ^^^^^^^^^ comment.block.puzzle
+##            ^^^^ comment.block.puzzle
+##                  ^^^^ comment.block.puzzle
+##                       ^ punctuation.definition.comment.end.puzzle
+##                                  ^ punctuation.definition.comment.end.puzzle
+
+    {#commentary}
+##   ^ punctuation.definition.keyword.puzzle
+##    ^^^^^^^^^^ invalid.illegal.directive.puzzle
+##    ^^^^^^^^^^ - comment.block.puzzle
+
+  </article>
+</puzzle-view>
+##  ^^^^^^^^^^^ entity.name.tag.section.puzzle
+
+<puzzle-skeleton min-duration="300">
+## ^^^^^^^^^^^^^^^ entity.name.tag.section.puzzle
+##                 ^^^^^^^^^^^^ entity.other.attribute-name.html
+  {#for 1...3, n}<div class="placeholder"></div>{/for}
+  ##       ^^^ keyword.operator.range.puzzle
+
+    {## skeleton note }
+##  ^^^ comment.block.template.puzzle
+##      ^^^^^^^^ comment.block.template.puzzle
+##                    ^ punctuation.definition.comment.end.puzzle
+</puzzle-skeleton>
+##  ^^^^^^^^^^^^^^^ entity.name.tag.section.puzzle
+
+<scripts>
+## ^^^^^^^ entity.name.tag.script.puzzle
+import { PuzzleView } from '@magic-spells/puzzle';
+## <- source.js.embedded.puzzle
+
+export default class Example extends PuzzleView {
+  data() {
+    return { bitmask: 1 | 2, logical: true || false };
+    ##                    ^ keyword.operator.bitwise.js
+    ##                                       ^^ keyword.operator.logical.js
+  }
+}
+</scripts>
+##  ^^^^^^^ entity.name.tag.section.puzzle
+
+<scripts lang="ts">
+## ^^^^^^^ entity.name.tag.script.puzzle
+##         ^^^^ entity.other.attribute-name.html
+interface User {
+## <- source.ts.embedded.puzzle
+  id: number;
+}
+const user: User = { id: 1 };
+</scripts>
+##  ^^^^^^^ entity.name.tag.section.puzzle
+
+<styles scoped>
+## ^^^^^^ entity.name.tag.style.puzzle
+##        ^^^^^^ entity.other.attribute-name.html
+@scope (.card) {
+## <- source.css.embedded.puzzle
+  .title:hover { color: rebeccapurple; }
+}
+</styles>
+##  ^^^^^^ entity.name.tag.section.puzzle

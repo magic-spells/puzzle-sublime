@@ -1,0 +1,369 @@
+%YAML 1.2
+---
+# Puzzle single-file components (.pzl) for Sublime Text 4.
+#
+# The template sections extend Sublime's complete HTML grammar, just like the
+# Svelte package does. Puzzle expressions are injected into normal HTML text
+# and attribute contexts, while <scripts> and <styles> embed their native
+# language grammars.
+name: Puzzle
+scope: text.html.puzzle
+version: 2
+
+extends: Packages/HTML/HTML.sublime-syntax
+
+file_extensions:
+  - pzl
+
+first_line_match: '^\s*<puzzle-view(?=[\s/>])'
+
+variables:
+  puzzle_component_name: '[[:upper:]][[:alnum:]_]*'
+  puzzle_identifier: '[_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*'
+  puzzle_event_modifier: '(?:prevent|stop|once|enter|escape|tab|space|up|down|left|right|backspace|delete)'
+  puzzle_script_end: '(?=</scripts{{tag_name_break_char}})'
+  puzzle_style_end: '(?=</styles{{tag_name_break_char}})'
+
+contexts:
+
+###[ HTML OVERRIDES ]##########################################################
+
+  main:
+    - meta_prepend: true
+    - meta_scope: meta.template.puzzle
+    # These must run before HTML's generic custom-tag matcher.
+    - include: puzzle-script-tags
+    - include: puzzle-style-tags
+
+  # HTML deliberately excludes prototypes from several string and tag
+  # contexts. Inject Puzzle expressions into each of the same extension points
+  # used by Sublime's Svelte syntax so interpolation works consistently in
+  # text, class/id/href values, generic values, and CDATA.
+  cdata-content:
+    - meta_prepend: true
+    - include: puzzle-embedded
+
+  strings-common-content:
+    - meta_prepend: true
+    - include: puzzle-embedded
+
+  tag-other:
+    - meta_prepend: true
+    - include: puzzle-embedded
+    - include: puzzle-section-tags
+    - include: puzzle-components
+
+  tag-attributes:
+    - meta_prepend: true
+    - include: puzzle-style-attribute
+    - include: puzzle-event-attributes
+
+  tag-generic-attribute-name:
+    - meta_prepend: true
+    - include: puzzle-embedded
+
+  tag-attribute-value-content:
+    - meta_prepend: true
+    - include: puzzle-embedded
+
+###[ PUZZLE SECTIONS ]#########################################################
+
+  puzzle-section-tags:
+    - match: '(</?)(puzzle-view|puzzle-skeleton|scripts|styles){{tag_name_break}}'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.section.puzzle
+      push: tag-other-content
+
+###[ SCRIPT SECTION ]##########################################################
+
+  puzzle-script-tags:
+    # TypeScript must be selected before the JavaScript fallback. The compiler
+    # accepts only lang="ts"/lang='ts' (plus the equivalent static bare value).
+    - match: '(<)(scripts){{tag_name_break}}(?=[^>]*\blang\s*=\s*(?:"ts"|''ts''|ts(?=[\s>]))[^>]*>)'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.script.puzzle
+      push: puzzle-script-typescript
+    - match: '(<)(scripts){{tag_name_break}}'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.script.puzzle
+      push: puzzle-script-javascript
+
+  puzzle-script-javascript:
+    - meta_include_prototype: false
+    - meta_scope: meta.tag.script.begin.puzzle
+    - include: merge-conflict-markers
+    - match: '>'
+      scope: punctuation.definition.tag.end.html
+      set: puzzle-script-javascript-content
+    - include: tag-attributes
+    - include: tag-end-self-closing
+
+  puzzle-script-typescript:
+    - meta_include_prototype: false
+    - meta_scope: meta.tag.script.begin.puzzle
+    - include: merge-conflict-markers
+    - match: '>'
+      scope: punctuation.definition.tag.end.html
+      set: puzzle-script-typescript-content
+    - include: tag-attributes
+    - include: tag-end-self-closing
+
+  puzzle-script-javascript-content:
+    - meta_include_prototype: false
+    - match: '(?=\s*(?:\S|\z))'
+      pop: 1
+      embed: scope:source.js
+      embed_scope: source.js.embedded.puzzle
+      escape: '{{puzzle_script_end}}'
+
+  puzzle-script-typescript-content:
+    - meta_include_prototype: false
+    - match: '(?=\s*(?:\S|\z))'
+      pop: 1
+      embed: scope:source.ts
+      embed_scope: source.ts.embedded.puzzle
+      escape: '{{puzzle_script_end}}'
+
+###[ STYLE SECTION ]###########################################################
+
+  puzzle-style-tags:
+    - match: '(<)(styles){{tag_name_break}}'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.style.puzzle
+      push: puzzle-style-css
+
+  puzzle-style-css:
+    - meta_include_prototype: false
+    - meta_scope: meta.tag.style.begin.puzzle
+    - include: merge-conflict-markers
+    - match: '>'
+      scope: punctuation.definition.tag.end.html
+      set: puzzle-style-css-content
+    - include: tag-attributes
+    - include: tag-end-self-closing
+
+  puzzle-style-css-content:
+    - meta_include_prototype: false
+    - match: '(?=\s*(?:\S|\z))'
+      pop: 1
+      embed: scope:source.css
+      embed_scope: source.css.embedded.puzzle
+      escape: '{{puzzle_style_end}}'
+
+###[ COMPONENTS ]##############################################################
+
+  puzzle-components:
+    - match: '(</?)({{puzzle_component_name}}{{tag_name_break}})'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.component.puzzle
+      push: tag-other-content
+
+###[ EVENT ATTRIBUTES ]########################################################
+
+  # Native HTML embeds CSS inside style="...", but its CSS context knows
+  # nothing about Puzzle braces. Use a tiny CSS extension so real inline styles
+  # retain CSS highlighting while interpolations and inline conditionals switch
+  # cleanly to the Puzzle expression grammar.
+  puzzle-style-attribute:
+    - match: '(?i:style){{attribute_name_break}}'
+      scope: entity.other.attribute-name.style.html
+      push:
+        - puzzle-style-attribute-meta
+        - puzzle-style-attribute-assignment
+
+  puzzle-style-attribute-meta:
+    - meta_include_prototype: false
+    - meta_scope: meta.attribute-with-value.style.html
+    - include: immediately-pop
+
+  puzzle-style-attribute-assignment:
+    - meta_include_prototype: false
+    - match: '='
+      scope: punctuation.separator.key-value.html
+      set: puzzle-style-attribute-value
+    - include: else-pop
+
+  puzzle-style-attribute-value:
+    - match: '"'
+      scope: meta.string.html string.quoted.double.html punctuation.definition.string.begin.html
+      embed: scope:source.css.embedded.puzzle-template#rule-list-body
+      embed_scope: meta.string.html source.css.embedded.puzzle-template
+      escape: '"'
+      escape_captures:
+        0: meta.string.html string.quoted.double.html punctuation.definition.string.end.html
+    - match: "'"
+      scope: meta.string.html string.quoted.single.html punctuation.definition.string.begin.html
+      embed: scope:source.css.embedded.puzzle-template#rule-list-body
+      embed_scope: meta.string.html source.css.embedded.puzzle-template
+      escape: "'"
+      escape_captures:
+        0: meta.string.html string.quoted.single.html punctuation.definition.string.end.html
+    - include: else-pop
+
+  puzzle-event-attributes:
+    # Catch Vue-style dotted modifiers and make the compiler error visible in
+    # the editor. Dotted custom event names remain valid unless their final
+    # segment is a recognized modifier.
+    - match: '(@)({{puzzle_identifier}}(?:[.-][A-Za-z0-9_-]+)*?)(\.)({{puzzle_event_modifier}})(?={{attribute_name_break}})'
+      captures:
+        1: keyword.operator.event.puzzle
+        2: entity.other.attribute-name.event.puzzle
+        3: invalid.illegal.event-modifier.puzzle
+        4: invalid.illegal.event-modifier.puzzle
+      push:
+        - tag-generic-attribute-meta
+        - tag-generic-attribute-assignment
+    - match: '(@)({{puzzle_identifier}}(?:[.-][A-Za-z0-9_-]+)*)'
+      captures:
+        1: keyword.operator.event.puzzle
+        2: entity.other.attribute-name.event.puzzle
+      push:
+        - tag-generic-attribute-meta
+        - tag-generic-attribute-assignment
+        - puzzle-event-modifiers
+
+  puzzle-event-modifiers:
+    - meta_include_prototype: false
+    - match: '(:)({{puzzle_event_modifier}})'
+      captures:
+        1: punctuation.separator.modifier.puzzle
+        2: support.constant.event-modifier.puzzle
+    - match: '(:)([A-Za-z][A-Za-z0-9_-]*)'
+      captures:
+        1: punctuation.separator.modifier.puzzle
+        2: invalid.illegal.event-modifier.puzzle
+    - match: '{{attribute_name_break}}'
+      pop: 1
+    - include: immediately-pop
+
+###[ TEMPLATE EXPRESSIONS ]####################################################
+
+  puzzle-embedded:
+    # Template comments (v1.37, D70) are stripped by the compiler and never
+    # parsed as markup. Both spellings open with a brace, so they must be
+    # matched before the directive and interpolation rules below — {## also
+    # satisfies the generic \{(?=[#:/]) directive lookahead.
+    - match: '\{##'
+      scope: comment.block.template.puzzle punctuation.definition.comment.begin.puzzle
+      push: puzzle-inline-comment-body
+    - match: '\{#\s*comment(?![A-Za-z0-9_\-:.])'
+      scope: comment.block.puzzle punctuation.definition.comment.begin.puzzle
+      push: puzzle-block-comment-body
+    # Directives are checked before ordinary interpolation because both begin
+    # with a single brace.
+    - match: '\{(?=[#:/])'
+      scope: punctuation.section.embedded.begin.puzzle
+      push:
+        - puzzle-directive-body
+        - puzzle-directive-begin
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      push: puzzle-interpolation-body
+
+  puzzle-directive-begin:
+    - meta_include_prototype: false
+    - match: '(#)(if|unless|case)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.conditional.puzzle
+      pop: 1
+    - match: '(#)(for)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.loop.puzzle
+      pop: 1
+    - match: '(#)(svg)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: support.function.inline-svg.puzzle
+      pop: 1
+    - match: '(:)(else)(\s+)(if)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.conditional.else.puzzle
+        4: keyword.control.conditional.if.puzzle
+      pop: 1
+    - match: '(:)(when)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.conditional.puzzle
+      pop: 1
+    - match: '(:)(else)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.conditional.else.puzzle
+      pop: 1
+    - match: '(/)(if|unless|for|case)\b'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: keyword.control.end.puzzle
+      pop: 1
+    - match: '([#:/])([A-Za-z][A-Za-z0-9_-]*)'
+      captures:
+        1: punctuation.definition.keyword.puzzle
+        2: invalid.illegal.directive.puzzle
+      pop: 1
+    - include: else-pop
+
+  puzzle-directive-body:
+    - clear_scopes: 1
+    - meta_scope: meta.embedded.block.puzzle
+    - meta_content_scope: source.js.embedded.puzzle
+    - match: '\}'
+      scope: punctuation.section.embedded.end.puzzle
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#expressions
+
+  puzzle-interpolation-body:
+    - clear_scopes: 1
+    - meta_scope: meta.interpolation.puzzle
+    - meta_content_scope: source.js.embedded.puzzle
+    - match: '\}'
+      scope: punctuation.section.embedded.end.puzzle
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#expressions
+
+###[ TEMPLATE COMMENTS ]######################################################
+
+  # Inline comment — {## any text } — terminates at the matching brace. Brace
+  # nesting is balanced ({ pushes, } pops) and \{ / \} escapes are consumed so
+  # they neither open nor close depth. Not string-aware: apostrophes are text.
+  puzzle-inline-comment-body:
+    - meta_include_prototype: false
+    - meta_scope: comment.block.template.puzzle
+    - match: '\\[{}]'
+      scope: constant.character.escape.puzzle
+    - match: '\{'
+      push: puzzle-inline-comment-nested
+    - match: '\}'
+      scope: punctuation.definition.comment.end.puzzle
+      pop: 1
+
+  # One level of {…} nesting inside an inline comment. The comment only ends on
+  # the brace that matches its opener, so inner braces balance here instead.
+  puzzle-inline-comment-nested:
+    - meta_include_prototype: false
+    - match: '\\[{}]'
+      scope: constant.character.escape.puzzle
+    - match: '\{'
+      push: puzzle-inline-comment-nested
+    - match: '\}'
+      pop: 1
+
+  # Block comment — {#comment} … {/comment} — has a raw body that is never
+  # parsed: interpolations, directives, and HTML comments inside are inert
+  # comment text. Nested {#comment} openers are balanced against their closers.
+  puzzle-block-comment-body:
+    - meta_include_prototype: false
+    - meta_scope: comment.block.puzzle
+    - match: '\{/\s*comment\s*\}'
+      scope: punctuation.definition.comment.end.puzzle
+      pop: 1
+    - match: '\{#\s*comment(?![A-Za-z0-9_\-:.])'
+      scope: punctuation.definition.comment.begin.puzzle
+      push: puzzle-block-comment-body

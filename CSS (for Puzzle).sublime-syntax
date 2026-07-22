@@ -1,0 +1,17 @@
+%YAML 1.2
+---
+# CSS declaration grammar used only inside Puzzle style="..." attributes.
+scope: source.css.embedded.puzzle-template
+version: 2
+hidden: true
+
+extends: Packages/CSS/CSS.sublime-syntax
+
+contexts:
+  rule-list-body:
+    - meta_prepend: true
+    - include: scope:text.html.puzzle#puzzle-embedded
+
+  property-value-content:
+    - meta_prepend: true
+    - include: scope:text.html.puzzle#puzzle-embedded
