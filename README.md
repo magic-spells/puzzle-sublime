@@ -6,9 +6,9 @@ The package follows the same composition model as Sublime's Svelte syntax:
 
 - `<puzzle-view>` and `<puzzle-skeleton>` extend Sublime's complete HTML grammar
   and add Puzzle's Svelte/Liquid-style template expressions.
-- `<scripts>` embeds Sublime's JavaScript grammar.
-- `<scripts lang="ts">` embeds Sublime's TypeScript grammar.
-- `<styles>` and `<styles scoped>` embed Sublime's CSS grammar.
+- `<script>` embeds Sublime's JavaScript grammar.
+- `<script lang="ts">` embeds Sublime's TypeScript grammar.
+- `<style>` and `<style scoped>` embed Sublime's CSS grammar.
 
 That means each section gets its native highlighting, symbol handling, comment
 behavior, and syntax recovery instead of relying on one hand-written grammar for

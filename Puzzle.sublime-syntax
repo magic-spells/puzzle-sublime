@@ -4,7 +4,7 @@
 #
 # The template sections extend Sublime's complete HTML grammar, just like the
 # Svelte package does. Puzzle expressions are injected into normal HTML text
-# and attribute contexts, while <scripts> and <styles> embed their native
+# and attribute contexts, while <script> and <style> embed their native
 # language grammars.
 name: Puzzle
 scope: text.html.puzzle
@@ -21,8 +21,8 @@ variables:
   puzzle_component_name: '[[:upper:]][[:alnum:]_]*'
   puzzle_identifier: '[_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*'
   puzzle_event_modifier: '(?:prevent|stop|once|enter|escape|tab|space|up|down|left|right|backspace|delete)'
-  puzzle_script_end: '(?=</scripts{{tag_name_break_char}})'
-  puzzle_style_end: '(?=</styles{{tag_name_break_char}})'
+  puzzle_script_end: '(?=</script{{tag_name_break_char}})'
+  puzzle_style_end: '(?=</style{{tag_name_break_char}})'
 
 contexts:
 
@@ -69,7 +69,7 @@ contexts:
 ###[ PUZZLE SECTIONS ]#########################################################
 
   puzzle-section-tags:
-    - match: '(</?)(puzzle-view|puzzle-skeleton|scripts|styles){{tag_name_break}}'
+    - match: '(</?)(puzzle-view|puzzle-skeleton|script|style){{tag_name_break}}'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.section.puzzle
@@ -80,12 +80,12 @@ contexts:
   puzzle-script-tags:
     # TypeScript must be selected before the JavaScript fallback. The compiler
     # accepts only lang="ts"/lang='ts' (plus the equivalent static bare value).
-    - match: '(<)(scripts){{tag_name_break}}(?=[^>]*\blang\s*=\s*(?:"ts"|''ts''|ts(?=[\s>]))[^>]*>)'
+    - match: '(<)(script){{tag_name_break}}(?=[^>]*\blang\s*=\s*(?:"ts"|''ts''|ts(?=[\s>]))[^>]*>)'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.script.puzzle
       push: puzzle-script-typescript
-    - match: '(<)(scripts){{tag_name_break}}'
+    - match: '(<)(script){{tag_name_break}}'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.script.puzzle
@@ -130,7 +130,7 @@ contexts:
 ###[ STYLE SECTION ]###########################################################
 
   puzzle-style-tags:
-    - match: '(<)(styles){{tag_name_break}}'
+    - match: '(<)(style){{tag_name_break}}'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.style.puzzle

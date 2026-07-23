@@ -180,8 +180,8 @@
 </puzzle-skeleton>
 ##  ^^^^^^^^^^^^^^^ entity.name.tag.section.puzzle
 
-<scripts>
-## ^^^^^^^ entity.name.tag.script.puzzle
+<script>
+## ^^^^^^ entity.name.tag.script.puzzle
 import { PuzzleView } from '@magic-spells/puzzle';
 ## <- source.js.embedded.puzzle
 
@@ -192,26 +192,26 @@ export default class Example extends PuzzleView {
     ##                                       ^^ keyword.operator.logical.js
   }
 }
-</scripts>
-##  ^^^^^^^ entity.name.tag.section.puzzle
+</script>
+##  ^^^^^^ entity.name.tag.section.puzzle
 
-<scripts lang="ts">
-## ^^^^^^^ entity.name.tag.script.puzzle
-##         ^^^^ entity.other.attribute-name.html
+<script lang="ts">
+## ^^^^^^ entity.name.tag.script.puzzle
+##        ^^^^ entity.other.attribute-name.html
 interface User {
 ## <- source.ts.embedded.puzzle
   id: number;
 }
 const user: User = { id: 1 };
-</scripts>
-##  ^^^^^^^ entity.name.tag.section.puzzle
+</script>
+##  ^^^^^^ entity.name.tag.section.puzzle
 
-<styles scoped>
-## ^^^^^^ entity.name.tag.style.puzzle
-##        ^^^^^^ entity.other.attribute-name.html
+<style scoped>
+## ^^^^^ entity.name.tag.style.puzzle
+##       ^^^^^^ entity.other.attribute-name.html
 @scope (.card) {
 ## <- source.css.embedded.puzzle
   .title:hover { color: rebeccapurple; }
 }
-</styles>
-##  ^^^^^^ entity.name.tag.section.puzzle
+</style>
+##  ^^^^^ entity.name.tag.section.puzzle
