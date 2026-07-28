@@ -47,11 +47,25 @@ contexts:
     - meta_prepend: true
     - include: puzzle-embedded
 
+  # A capitalized tag is always a Puzzle component, even when its name is also
+  # an HTML element. HTML matches its own tag lists case-insensitively, so
+  # <Slot>, <Header>, <Button>, <Table> and friends would otherwise be scoped
+  # as the HTML elements slot/header/button/table. HTML's `tag` context tries
+  # tag-html before tag-other, so the component rule has to be prepended here
+  # — prepending it to tag-other alone runs too late.
+  # The section close tags need the same treatment: </script> and </style> are
+  # matched by HTML's own script/style rules otherwise, and scope as
+  # entity.name.tag.script.html instead of the documented section scope. (The
+  # open tags never get here — puzzle-script-tags / puzzle-style-tags claim
+  # them from `main`, before HTML is reached at all.)
+  tag:
+    - meta_prepend: true
+    - include: puzzle-components
+    - include: puzzle-section-tags
+
   tag-other:
     - meta_prepend: true
     - include: puzzle-embedded
-    - include: puzzle-section-tags
-    - include: puzzle-components
 
   tag-attributes:
     - meta_prepend: true
