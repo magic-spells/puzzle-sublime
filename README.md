@@ -25,12 +25,24 @@ Both template sections support:
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
 - Collection and range loops: `{#for item in items, i}` and `{#for 1...5, n}`
 - Compile-time SVG directives: `{#svg 'icons/heart.svg'}`
+- Template comments: `{## note }` and `{#comment} … {/comment}`
+- Raw blocks: `{#raw} … {/raw}`
 - Dynamic attributes and expressions inside quoted attributes
-- Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`
-- Capitalized component tags such as `<AlbumCard />` and `<Slot />`
+- Directive attributes: `key`, `island`, `ref`, `flip`
+- Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`,
+  including the event-generic `@click:outside`
+- Composition markers — `<Children>`, `<Slot>` and `<Portal>` — in both the
+  self-closing and the paired fallback-body spelling
+- Capitalized component tags such as `<AlbumCard />`
 
 HTML comments intentionally suppress Puzzle expressions, so examples like
 `<!-- {#if documentedExample} -->` remain comments.
+
+A `{#raw}` body is highlighted the way the compiler reads it: braces are inert
+there — no interpolation, block tags, formatter pipes or `@event` bindings —
+while HTML stays structural, so `<b>` is still an element and `<Slot/>` is a
+plain tag rather than a marker. Lowercase `<slot>`, `<children>` and `<portal>`
+are compile errors outside a raw block and are flagged as such.
 
 ## Install for development
 
@@ -68,8 +80,11 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Construct | Scope |
 | --- | --- |
 | Puzzle section tag | `entity.name.tag.section.puzzle` |
+| Composition marker | `entity.name.tag.marker.puzzle` |
 | Component tag | `entity.name.tag.component.puzzle` |
 | Directive | `keyword.control.*.puzzle` |
+| Directive attribute | `entity.other.attribute-name.directive.puzzle` |
+| Raw block body | `meta.block.raw.puzzle` |
 | Interpolation | `meta.interpolation.puzzle` |
 | Formatter pipe | `keyword.operator.formatter.puzzle` |
 | Formatter name | `variable.function.formatter.puzzle` |
@@ -95,3 +110,9 @@ semantic validation. For example, Sublime can color an event modifier but does
 not decide whether that modifier is legal for a specific DOM or component event.
 Likewise, embedded JavaScript/TypeScript and CSS follow Sublime's standard HTML
 embedding boundary behavior around literal closing section tags.
+
+One consequence of that boundary: every `<script>` in a file is claimed as the
+script section, so a `<script type="application/json">` used as a data island
+inside the template embeds JavaScript, and a `{#raw}` block written inside it is
+highlighted as JavaScript rather than as a raw body. Raw blocks in ordinary
+template text are unaffected.

@@ -164,18 +164,19 @@
     ##^^^^^^^^^^ - comment.block.puzzle
 
 
-    ## --- Paired composition markers (D141) --- capitalized markers are
-    ## ordinary component tags; fallback bodies are ordinary template content
+    ## --- Paired composition markers (D141) --- Children, Slot and Portal are
+    ## reserved markers, not components; fallback bodies are ordinary content
 
     <Slot name="header"><h2>{ title | capitalize }</h2></Slot>
-   ##^^^^ entity.name.tag.component.puzzle
+   ##^^^^ entity.name.tag.marker.puzzle
+   ##^^^^ - entity.name.tag.component.puzzle
     ##                      ^ punctuation.section.embedded.begin.puzzle
     ##                        ^^^^^ source.js.embedded.puzzle
     ##                              ^ keyword.operator.formatter.puzzle
     ##                                ^^^^^^^^^^ variable.function.formatter.puzzle
-    ##                                                   ^^^^ entity.name.tag.component.puzzle
+    ##                                                   ^^^^ entity.name.tag.marker.puzzle
     <Children>
-   ##^^^^^^^^ entity.name.tag.component.puzzle
+   ##^^^^^^^^ entity.name.tag.marker.puzzle
       {#if items.length}<ItemCard item={ items[0] } />{:else}<p>plain</p>{/if}
       ##^^ keyword.control.conditional.puzzle
       ##   ^^^^^^^^^^^^ source.js.embedded.puzzle
@@ -185,19 +186,172 @@
       ##                                                        ^^^^^ - source.js.embedded.puzzle
       ##                                                                   ^^ keyword.control.end.puzzle
     </Children>
-    ##^^^^^^^^ entity.name.tag.component.puzzle
+    ##^^^^^^^^ entity.name.tag.marker.puzzle
 
     <Slot>{ count | number } left{#svg 'icons/empty.svg'}</Slot>
-   ##^^^^ entity.name.tag.component.puzzle
+   ##^^^^ entity.name.tag.marker.puzzle
     ##      ^^^^^ source.js.embedded.puzzle
     ##              ^^^^^^ variable.function.formatter.puzzle
     ##                       ^^^^ - source.js.embedded.puzzle
     ##                             ^^^ support.function.inline-svg.puzzle
-    ##                                                     ^^^^ entity.name.tag.component.puzzle
+    ##                                                     ^^^^ entity.name.tag.marker.puzzle
 
     <Children/><Slot name="footer"/>
-   ##^^^^^^^^ entity.name.tag.component.puzzle
-    ##          ^^^^ entity.name.tag.component.puzzle
+   ##^^^^^^^^ entity.name.tag.marker.puzzle
+    ##          ^^^^ entity.name.tag.marker.puzzle
+
+    <Portal><div class="dialog">{ message }</div></Portal>
+   ##^^^^^^ entity.name.tag.marker.puzzle
+    ##       ^^^ entity.name.tag.block.any.html
+    ##                          ^ punctuation.section.embedded.begin.puzzle
+    ##                            ^^^^^^^ source.js.embedded.puzzle
+    ##                                             ^^^^^^ entity.name.tag.marker.puzzle
+
+    ## a capitalized name that merely starts with a marker word is a component
+
+    <Slotted/><PortalHost/>
+   ##^^^^^^^ entity.name.tag.component.puzzle
+    ##         ^^^^^^^^^^ entity.name.tag.component.puzzle
+
+
+    ## --- Lowercase marker spellings are compile errors (D134/D144) ---
+
+    <slot></slot><children/><portal></portal>
+   ##^^^^ invalid.illegal.marker.puzzle
+   ##^^^^ - entity.name.tag.block.any.html
+    ##      ^^^^ invalid.illegal.marker.puzzle
+    ##            ^^^^^^^^ invalid.illegal.marker.puzzle
+    ##                       ^^^^^^ invalid.illegal.marker.puzzle
+    ##                                ^^^^^^ invalid.illegal.marker.puzzle
+
+
+    ## --- Directive attributes --- intercepted by the compiler, never DOM
+
+    <li key={ item.id } ref="row" island flip>
+    ##  ^^^ entity.other.attribute-name.directive.puzzle
+    ##      ^ punctuation.section.embedded.begin.puzzle
+    ##        ^^^^^^^ source.js.embedded.puzzle
+    ##                  ^^^ entity.other.attribute-name.directive.puzzle
+    ##                      ^^^^^ string.quoted.double.html
+    ##                            ^^^^^^ entity.other.attribute-name.directive.puzzle
+    ##                                   ^^^^ entity.other.attribute-name.directive.puzzle
+      done
+    </li>
+
+    <tr key="row-{ i }" flip={ track.id }>
+    ##  ^^^ entity.other.attribute-name.directive.puzzle
+    ##           ^ punctuation.section.embedded.begin.puzzle
+    ##             ^ source.js.embedded.puzzle
+    ##                  ^^^^ entity.other.attribute-name.directive.puzzle
+    ##                         ^^^^^^^^ source.js.embedded.puzzle
+      <td>cell</td>
+    </tr>
+
+    ## a directive word inside a longer name stays a plain attribute
+
+    <div data-ref="x" keyboard="y"></div>
+    ##   ^^^^^^^^ - entity.other.attribute-name.directive.puzzle
+    ##                ^^^^^^^^ - entity.other.attribute-name.directive.puzzle
+
+
+    ## --- The outside event modifier (v1.52, D86) is event-generic ---
+
+    <div @click:outside={ close } @pointerdown:outside:once={ close }>
+    ##   ^ keyword.operator.event.puzzle
+    ##    ^^^^^ entity.other.attribute-name.event.puzzle
+    ##         ^ punctuation.separator.modifier.puzzle
+    ##          ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                            ^ keyword.operator.event.puzzle
+    ##                             ^^^^^^^^^^^ entity.other.attribute-name.event.puzzle
+    ##                                        ^ punctuation.separator.modifier.puzzle
+    ##                                         ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                                                ^ punctuation.separator.modifier.puzzle
+    ##                                                 ^^^^ support.constant.event-modifier.puzzle
+    </div>
+
+    <div @click.outside={ broken }></div>
+    ##         ^^^^^^^^ invalid.illegal.event-modifier.puzzle
+
+
+    ## --- Raw blocks (D150) --- braces inert, HTML still structural
+
+    {#raw}{ "loop": true } {#if x}{:else}{/if} { a | upper }{/raw}
+  ##^ punctuation.section.embedded.begin.puzzle
+   ##^ punctuation.definition.keyword.puzzle
+    ##^^^ keyword.control.raw.puzzle
+    ##   ^ punctuation.section.embedded.end.puzzle
+    ##    ^ - punctuation.section.embedded.begin.puzzle
+    ##      ^^^^^^ - source.js.embedded.puzzle
+    ##                       ^^ - keyword.control.conditional.puzzle
+    ##                              ^^^^ - keyword.control.conditional.else.puzzle
+    ##                                     ^^ - keyword.control.end.puzzle
+    ##                                             ^ - keyword.operator.formatter.puzzle
+    ##                                               ^^^^^ - variable.function.formatter.puzzle
+    ##                                                      ^ punctuation.section.embedded.begin.puzzle
+    ##                                                       ^ punctuation.definition.keyword.puzzle
+    ##                                                        ^^^ keyword.control.end.puzzle
+    ##                                                           ^ punctuation.section.embedded.end.puzzle
+
+    ## content after the keyword is allowed and ignored
+
+    {#raw json}x{/raw}
+    ##^^^ keyword.control.raw.puzzle
+    ##    ^^^^ comment.other.raw-opener.puzzle
+    ##        ^ punctuation.section.embedded.end.puzzle
+    ##            ^^^ keyword.control.end.puzzle
+
+    ## the closer tolerates whitespace around its keyword
+
+    {#raw}a{/ raw }
+    ##^^^ keyword.control.raw.puzzle
+    ##     ^ punctuation.section.embedded.begin.puzzle
+    ##      ^ punctuation.definition.keyword.puzzle
+    ##        ^^^ keyword.control.end.puzzle
+    ##            ^ punctuation.section.embedded.end.puzzle
+
+    ## HTML stays structural inside the body, and every attribute is literal
+
+    {#raw}<b class="hi">x</b><button @click={ handler } ref="r">y</button>{/raw}
+    ##     ^ entity.name.tag.inline.any.html
+    ##       ^^^^^ entity.other.attribute-name.html
+    ##              ^^ string.quoted.double.html
+    ##                        ^^^^^^ entity.name.tag.inline.form.html
+    ##                               ^^^^^^ entity.other.attribute-name.html
+    ##                               ^^^^^^ - keyword.operator.event.puzzle
+    ##                                      ^ - punctuation.section.embedded.begin.puzzle
+    ##                                        ^^^^^^^ - source.js.embedded.puzzle
+    ##                                                  ^^^ entity.other.attribute-name.html
+    ##                                                  ^^^ - entity.other.attribute-name.directive.puzzle
+    ##                                                             ^^^^^^ entity.name.tag.inline.form.html
+    ##                                                                      ^^^ keyword.control.end.puzzle
+
+    ## markers and components are plain elements in a raw body
+
+    {#raw}<Slot/><Portal>x</Portal><Card/><slot></slot>{/raw}
+    ##     ^^^^ - entity.name.tag.marker.puzzle
+    ##            ^^^^^^ - entity.name.tag.marker.puzzle
+    ##            ^^^^^^ entity.name.tag.other.html
+    ##                              ^^^^ entity.name.tag.other.html
+    ##                                     ^^^^ - invalid.illegal.marker.puzzle
+    ##                                                   ^^^ keyword.control.end.puzzle
+
+    ## an HTML comment in a raw body is still a comment
+
+    {#raw}<!-- note -->{/raw}
+    ##    ^^^^^^^^^^^^^ comment.block.html
+    ##                   ^^^ keyword.control.end.puzzle
+
+    ## a raw block only ends at a real closer, so nested block tags stay text
+
+    {#raw}{/if}{/comment}{/raw}
+    ##      ^^ - keyword.control.end.puzzle
+    ##           ^^^^^^^ - keyword.control.end.puzzle
+    ##                     ^^^ keyword.control.end.puzzle
+
+    ## a raw block in an attribute value is a compile error
+
+    <div class="a {#raw}x"></div>
+    ##            ^^^^^^ invalid.illegal.raw-in-attribute.puzzle
 
   </article>
 </puzzle-view>
