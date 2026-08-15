@@ -325,6 +325,36 @@
     ##                                                             ^^^^^^ entity.name.tag.inline.form.html
     ##                                                                      ^^^ keyword.control.end.puzzle
 
+    ## a braced attribute value is one opaque span, and a brace inside a
+    ## quoted string does not end it -- the value runs to its balanced close
+
+    {#raw}<b d={ {"t": "}"} }>x</b>{/raw}
+    ##     ^ entity.name.tag.inline.any.html
+    ##       ^ entity.other.attribute-name.html
+    ##         ^^^^^^^^^^^^^^ string.unquoted.html
+    ##                  ^ string.unquoted.html
+    ##                      ^ - entity.other.attribute-name.html
+    ##                       ^ punctuation.definition.tag.end.html
+    ##                               ^^^ keyword.control.end.puzzle
+
+    {#raw}<b d={ {'t': '}'} }>x</b>{/raw}
+    ##     ^ entity.name.tag.inline.any.html
+    ##         ^^^^^^^^^^^^^^ string.unquoted.html
+    ##                  ^ string.unquoted.html
+    ##                      ^ - entity.other.attribute-name.html
+    ##                       ^ punctuation.definition.tag.end.html
+    ##                               ^^^ keyword.control.end.puzzle
+
+    ## the same at a text position: a lone brace in the body is inert bytes
+    ## and only the closer ends the block
+
+    {#raw}{ "a": "}" }{/raw}
+    ##    ^^^^^^^^^^^^ meta.block.raw.puzzle
+    ##            ^ - punctuation.section.embedded.end.puzzle
+    ##               ^ - keyword.control.end.puzzle
+    ##                ^ punctuation.section.embedded.begin.puzzle
+    ##                  ^^^ keyword.control.end.puzzle
+
     ## markers and components are plain elements in a raw body
 
     {#raw}<Slot/><Portal>x</Portal><Card/><slot></slot>{/raw}

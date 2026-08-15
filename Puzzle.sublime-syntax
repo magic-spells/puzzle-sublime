@@ -589,13 +589,59 @@ contexts:
 
   # One brace level per stack frame: the opening brace was consumed by the rule
   # that set this context, so the matching close pops back out.
+  #
+  # The scan must not be byte-naive. The compiler locates the value's END with
+  # its shared, JS-lexically-aware brace scan, so a `}` inside a string does not
+  # close the group — `data-json={ {"text": "}"} }` survives (D150). Quoted
+  # spans are therefore consumed whole, before the pop rule can see a brace
+  # inside one. Only the SPAN comes from that scan, never a meaning: the bytes
+  # stay opaque, so the string contexts add no scope of their own.
+  #
+  # Comments and regex literals are deliberately not handled. Both are
+  # ambiguous without parsing the surrounding expression (`/` is division far
+  # more often than a literal here), and neither can appear in a brace-valued
+  # attribute without the braces around it already being unbalanced — which
+  # this context cannot survive either way.
   puzzle-raw-attribute-value-braces:
     - meta_include_prototype: false
     - meta_content_scope: meta.string.html string.unquoted.html
+    - match: '"'
+      push: puzzle-raw-brace-string-double
+    - match: "'"
+      push: puzzle-raw-brace-string-single
+    - match: '`'
+      push: puzzle-raw-brace-string-template
     - match: '\{'
       push: puzzle-raw-attribute-value-braces
     - match: '\}'
       scope: meta.string.html string.unquoted.html
+      pop: 1
+
+  # A quoted span inside a braced value. Escapes are consumed so \" does not
+  # end the span, and an unterminated quote stops at the newline the way
+  # JavaScript's own string contexts do — only a template literal may span
+  # lines, so only it omits that guard. `${…}` in a template literal is
+  # ordinary content here: its braces never reach the depth counter.
+  puzzle-raw-brace-string-double:
+    - meta_include_prototype: false
+    - match: '\\.'
+    - match: '"'
+      pop: 1
+    - match: '\n'
+      pop: 1
+
+  puzzle-raw-brace-string-single:
+    - meta_include_prototype: false
+    - match: '\\.'
+    - match: "'"
+      pop: 1
+    - match: '\n'
+      pop: 1
+
+  puzzle-raw-brace-string-template:
+    - meta_include_prototype: false
+    - match: '\\.'
+    - match: '`'
       pop: 1
 
   # {#raw} is text-position syntax. In an attribute value — or an interpolated
