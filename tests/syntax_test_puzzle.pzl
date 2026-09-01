@@ -214,6 +214,27 @@
     ##         ^^^^^^^^^^ entity.name.tag.component.puzzle
 
 
+    ## --- Component families: dotted component tags (D167) --- a component
+    ## tag name is a member path, emitted verbatim as a JS member expression
+
+    <Frame.Wrapper class="dotted">
+   ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      <Frame.Content>{ title }</Frame.Content>
+     ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      ##                        ^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      <Frame.Inner.Deep/>
+     ##^^^^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+    </Frame.Wrapper>
+    ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+
+    ## a dotted name rooted at a marker word is a component, not a marker:
+    ## markers are exact-match names, so <Slot.Custom/> falls through
+
+    <Slot.Custom/>
+   ##^^^^^^^^^^^ entity.name.tag.component.puzzle
+   ##^^^^^^^^^^^ - entity.name.tag.marker.puzzle
+
+
     ## --- Lowercase marker spellings are compile errors (D134/D144) ---
 
     <slot></slot><children/><portal></portal>

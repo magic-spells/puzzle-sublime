@@ -33,7 +33,8 @@ Both template sections support:
   including the event-generic `@click:outside`
 - Composition markers — `<Children>`, `<Slot>` and `<Portal>` — in both the
   self-closing and the paired fallback-body spelling
-- Capitalized component tags such as `<AlbumCard />`
+- Capitalized component tags such as `<AlbumCard />`, including dotted
+  component-family member paths such as `<Frame.Wrapper>` (D167)
 
 HTML comments intentionally suppress Puzzle expressions, so examples like
 `<!-- {#if documentedExample} -->` remain comments.

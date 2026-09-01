@@ -18,10 +18,17 @@ file_extensions:
 first_line_match: '^\s*<puzzle-view(?=[\s/>])'
 
 variables:
-  puzzle_component_name: '[[:upper:]][[:alnum:]_]*'
+  # A component tag name is a member path — Ident('.'Ident)*, each segment an
+  # identifier, capitalized at the root (D167). Codegen emits the name verbatim
+  # as a JS member expression, so <Frame.Wrapper> is a component family member
+  # and the whole dotted name carries the component scope.
+  puzzle_component_name: '[[:upper:]][[:alnum:]_]*(?:\.[[:alpha:]_][[:alnum:]_]*)*'
   # Composition markers are reserved capitalized tags, matched ahead of the
   # generic component name so <Slot>/<Children>/<Portal> never fall through to
-  # it. The lowercase spellings are compile errors (D134/D144), never elements.
+  # it. They are exact-match names: {{tag_name_break}} is `(?=[\s/<>])`, so a
+  # dotted root like <Slot.Custom/> fails the marker rule and falls through to
+  # the component rule (a compile error in the framework; not flagged here).
+  # The lowercase spellings are compile errors (D134/D144), never elements.
   puzzle_marker_name: '(?:Children|Slot|Portal)'
   puzzle_invalid_marker_name: '(?:children|slot|portal)'
   # Runtime directives the compiler intercepts: they never reach the DOM.
