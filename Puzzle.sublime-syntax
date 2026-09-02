@@ -24,12 +24,15 @@ variables:
   # and the whole dotted name carries the component scope.
   puzzle_component_name: '[[:upper:]][[:alnum:]_]*(?:\.[[:alpha:]_][[:alnum:]_]*)*'
   # Composition markers are reserved capitalized tags, matched ahead of the
-  # generic component name so <Slot>/<Children>/<Portal> never fall through to
-  # it. They are exact-match names: {{tag_name_break}} is `(?=[\s/<>])`, so a
-  # dotted root like <Slot.Custom/> fails the marker rule and falls through to
-  # the component rule (a compile error in the framework; not flagged here).
-  # The lowercase spellings are compile errors (D134/D144), never elements.
-  puzzle_marker_name: '(?:Children|Slot|Portal)'
+  # generic component name so <Slot>/<Children>/<Portal>/<Snippet> never fall
+  # through to it. They are exact-match names: {{tag_name_break}} is
+  # `(?=[\s/<>])`, so a dotted root like <Slot.Custom/> fails the marker rule
+  # and falls through to the component rule (a compile error in the framework;
+  # not flagged here).
+  # The lowercase spellings are compile errors (D134/D144), never elements —
+  # except <snippet>, which only steers when it carries `fits` (D166) and so is
+  # left as an ordinary element here.
+  puzzle_marker_name: '(?:Children|Slot|Portal|Snippet)'
   puzzle_invalid_marker_name: '(?:children|slot|portal)'
   # Runtime directives the compiler intercepts: they never reach the DOM.
   puzzle_directive_attribute: '(?:key|island|ref|flip)'
@@ -200,13 +203,15 @@ contexts:
 
 ###[ COMPONENTS AND MARKERS ]##################################################
 
-  # <Children>, <Slot> and <Portal> are reserved composition markers, not
-  # components: the compiler resolves them before component lookup, so they get
-  # their own scope. This has to run ahead of puzzle-components (Slot also
-  # matches {{puzzle_component_name}}) and — like puzzle-components — ahead of
-  # HTML's own tag rules, which match tag names case-insensitively and would
-  # otherwise claim <Slot> as the HTML slot element. Self-closing and paired
-  # spellings are both valid; a paired body is fallback content (D141).
+  # <Children>, <Slot>, <Portal> and <Snippet> are reserved composition
+  # markers, not components: the compiler resolves them before component
+  # lookup, so they get their own scope. This has to run ahead of
+  # puzzle-components (Slot also matches {{puzzle_component_name}}) and — like
+  # puzzle-components — ahead of HTML's own tag rules, which match tag names
+  # case-insensitively and would otherwise claim <Slot> as the HTML slot
+  # element. Self-closing and paired spellings are both valid; a paired body is
+  # fallback content (D141). <Portal> and <Snippet> are paired-only, which the
+  # grammar does not enforce.
   puzzle-markers:
     - match: '(</?)({{puzzle_marker_name}}{{tag_name_break}})'
       captures:

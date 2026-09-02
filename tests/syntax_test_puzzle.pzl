@@ -207,11 +207,38 @@
     ##                            ^^^^^^^ source.js.embedded.puzzle
     ##                                             ^^^^^^ entity.name.tag.marker.puzzle
 
+    ## --- Snippets (D166) --- <Snippet> is a caller-side marker; `fits`
+    ## routes it to a named position and every other attribute is a bare
+    ## parameter declaration
+
+    <UserList users={ users }>
+   ##^^^^^^^^ entity.name.tag.component.puzzle
+      <Snippet fits="row" user group><b>{ user.name }</b></Snippet>
+    ## ^^^^^^^ entity.name.tag.marker.puzzle
+    ## ^^^^^^^ - entity.name.tag.component.puzzle
+    ##         ^^^^ entity.other.attribute-name.html
+    ##                    ^^^^ entity.other.attribute-name.html
+    ##                         ^^^^^ entity.other.attribute-name.html
+    ##                                    ^^^^^^^^^ source.js.embedded.puzzle
+    ##                                                     ^^^^^^^ entity.name.tag.marker.puzzle
+    </UserList>
+    ##^^^^^^^^ entity.name.tag.component.puzzle
+
+    ## a marker hands values out per stamp: on <Slot>/<Children> a valued
+    ## attribute is an argument, and the paired body stays a D141 fallback
+
+    <Slot name="row" user={ user }>none</Slot>
+   ##^^^^ entity.name.tag.marker.puzzle
+    ##               ^^^^ entity.other.attribute-name.html
+    ##                      ^^^^ source.js.embedded.puzzle
+    ##                                   ^^^^ entity.name.tag.marker.puzzle
+
     ## a capitalized name that merely starts with a marker word is a component
 
-    <Slotted/><PortalHost/>
+    <Slotted/><PortalHost/><SnippetHost/>
    ##^^^^^^^ entity.name.tag.component.puzzle
     ##         ^^^^^^^^^^ entity.name.tag.component.puzzle
+    ##                      ^^^^^^^^^^^ entity.name.tag.component.puzzle
 
 
     ## --- Component families: dotted component tags (D167) --- a component

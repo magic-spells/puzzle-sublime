@@ -31,8 +31,8 @@ Both template sections support:
 - Directive attributes: `key`, `island`, `ref`, `flip`
 - Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`,
   including the event-generic `@click:outside`
-- Composition markers — `<Children>`, `<Slot>` and `<Portal>` — in both the
-  self-closing and the paired fallback-body spelling
+- Composition markers — `<Children>`, `<Slot>`, `<Portal>` and `<Snippet>` — in
+  both the self-closing and the paired fallback-body spelling
 - Capitalized component tags such as `<AlbumCard />`, including dotted
   component-family member paths such as `<Frame.Wrapper>` (D167)
 
