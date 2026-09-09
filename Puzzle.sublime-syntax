@@ -30,8 +30,14 @@ variables:
   # and falls through to the component rule (a compile error in the framework;
   # not flagged here).
   # The lowercase spellings are compile errors (D134/D144), never elements —
-  # except <snippet>, which only steers when it carries `fits` (D166) and so is
-  # left as an ordinary element here.
+  # <slot>, <children> and <portal> are rejected on sight. <snippet> is
+  # deliberately OUT of that list: the parser steers it to <Snippet> only when
+  # it carries `fits` or a bare attribute (D166), so a plain
+  # <snippet class="x">…</snippet> is ordinary markup and flagging it would
+  # paint valid code red. `fits`-carrying spellings are left unflagged rather
+  # than matched with a lookahead, because the grammar cannot tell a bare
+  # parameter from a valueless HTML attribute without parsing the whole tag.
+  # <template> likewise stays an ordinary HTML element with no marker meaning.
   puzzle_marker_name: '(?:Children|Slot|Portal|Snippet)'
   puzzle_invalid_marker_name: '(?:children|slot|portal)'
   # Runtime directives the compiler intercepts: they never reach the DOM.
@@ -93,9 +99,14 @@ contexts:
     - include: puzzle-section-tags
     - include: puzzle-invalid-markers
 
+  # HTML reaches `tag-other` only from `tag`, which only `html`/`main` include,
+  # so this prepend is the top-level TEXT scan — the one position where the
+  # \{ / \} escape is live. Everything else that pulls in puzzle-embedded is an
+  # attribute or CDATA position, so the escape rides puzzle-text-embedded here
+  # instead of puzzle-embedded itself.
   tag-other:
     - meta_prepend: true
-    - include: puzzle-embedded
+    - include: puzzle-text-embedded
 
   tag-attributes:
     - meta_prepend: true
@@ -330,6 +341,22 @@ contexts:
     - include: immediately-pop
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
+
+  # Ordinary template text, and nothing else. `\{` and `\}` are escapes ONLY
+  # here: the lexer's lexText drops the backslash and emits a literal brace, so
+  # `\{` never opens an interpolation. The escape is matched ahead of
+  # puzzle-embedded so it wins over {##, {#comment, {#raw and the bare `{`.
+  #
+  # It is deliberately NOT in puzzle-embedded, which attribute positions share:
+  # neither the quoted-value splitter (parseAttrParts) nor the brace-value scan
+  # handles backslashes, so `title="a \{ b"` keeps a literal backslash and its
+  # brace still opens an interpolation. A {#raw} body gets no escape either —
+  # lexRawText does no backslash handling at all — and it never reaches this
+  # context: puzzle-raw-block carries its own tag grammar.
+  puzzle-text-embedded:
+    - match: '\\[{}]'
+      scope: constant.character.escape.puzzle
+    - include: puzzle-embedded
 
   puzzle-embedded:
     # Template comments (v1.37, D70) are stripped by the compiler and never

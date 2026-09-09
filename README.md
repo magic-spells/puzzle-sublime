@@ -1,6 +1,15 @@
 # Puzzle syntax for Sublime Text
 
 Sublime Text 4 syntax highlighting for Puzzle single-file components (`.pzl`).
+Tracks the Puzzle **0.7.0** template grammar.
+
+New in 0.7.0:
+
+- Dotted component-family tags — `<Frame.Wrapper>`, `<Frame.Inner.Deep/>` (D167)
+- The `<Snippet>` marker and its bare parameter attributes, plus marker
+  arguments on `<Children>` and `<Slot>` — `<Children user={ user }>` (D166)
+- The `\{` / `\}` text escape, which renders a literal brace instead of opening
+  an interpolation
 
 The package follows the same composition model as Sublime's Svelte syntax:
 
@@ -27,12 +36,15 @@ Both template sections support:
 - Compile-time SVG directives: `{#svg 'icons/heart.svg'}`
 - Template comments: `{## note }` and `{#comment} … {/comment}`
 - Raw blocks: `{#raw} … {/raw}`
+- Brace escapes in template text: `Use \{ braces \} literally`
 - Dynamic attributes and expressions inside quoted attributes
 - Directive attributes: `key`, `island`, `ref`, `flip`
 - Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`,
   including the event-generic `@click:outside`
 - Composition markers — `<Children>`, `<Slot>`, `<Portal>` and `<Snippet>` — in
   both the self-closing and the paired fallback-body spelling
+- Marker arguments — `<Children user={ user }>`, `<Slot name="row" user={ user }>`
+  — and `<Snippet fits="row" user group>` bare parameter declarations (D166)
 - Capitalized component tags such as `<AlbumCard />`, including dotted
   component-family member paths such as `<Frame.Wrapper>` (D167)
 
@@ -43,7 +55,15 @@ A `{#raw}` body is highlighted the way the compiler reads it: braces are inert
 there — no interpolation, block tags, formatter pipes or `@event` bindings —
 while HTML stays structural, so `<b>` is still an element and `<Slot/>` is a
 plain tag rather than a marker. Lowercase `<slot>`, `<children>` and `<portal>`
-are compile errors outside a raw block and are flagged as such.
+are compile errors outside a raw block and are flagged as such. A lowercase
+`<snippet>` is deliberately not flagged: the compiler only steers it to
+`<Snippet>` when it carries `fits` or a bare parameter, so a plain one is
+ordinary markup.
+
+`\{` and `\}` are escapes in ordinary template text only, matching the lexer:
+`Use \{ braces \}` renders literal braces and opens no interpolation. Attribute
+values get no escape (`title="a \{ b }"` still interpolates), and neither does a
+`{#raw}` body.
 
 ## Install for development
 
@@ -92,6 +112,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event/action sigil (`@`) | `keyword.operator.event.puzzle` |
 | Event/action name | `entity.other.attribute-name.event.puzzle` |
 | Event modifier | `support.constant.event-modifier.puzzle` |
+| Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
 
 ## Tests
@@ -100,9 +121,19 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-The test suite covers the HTML template grammar, every shipped Puzzle directive,
-formatter chains, event modifiers, JavaScript, TypeScript, and CSS section
-boundaries.
+308 assertions covering the HTML template grammar, every shipped Puzzle
+directive, formatter chains, event modifiers, composition markers and their
+arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
+section boundaries.
+
+The runner is Sublime's own — there is no external CLI — but it can be driven
+without touching the UI, provided this repository is symlinked into `Packages/`
+as above. Drop a plugin in `Packages/User` that calls
+`sublime_api.run_syntax_test('Packages/Puzzle/tests/syntax_test_puzzle.pzl')`
+and writes the result somewhere, then trigger it with
+`subl --background --command "<your_command>"`. Sublime needs a few seconds to
+notice an edited `.sublime-syntax` before it recompiles, so pause between saving
+and running or the results will be from the previous version.
 
 ## Intentional limits
 

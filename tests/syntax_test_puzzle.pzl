@@ -104,6 +104,25 @@
     ##        ^ constant.numeric.value.js
     ##                           ^^^ keyword.control.end.puzzle
 
+    ## a counterless range header is the same shape
+
+    {#for 1...5}<b>x</b>{/for}
+    ##^^^ keyword.control.loop.puzzle
+    ##    ^ constant.numeric.value.js
+    ##     ^^^ keyword.operator.range.puzzle
+    ##        ^ constant.numeric.value.js
+
+    ## `{#for i in 1...5}` is a compile error in 0.7.0 -- write `{#for 1...5, i}`
+    ## instead. The grammar does not flag it, but the range operator must still
+    ## read as one token rather than eating the digits around it.
+
+    {#for i in 1...5}<b>x</b>{/for}
+    ##^^^ keyword.control.loop.puzzle
+    ##      ^^ keyword.operator.js
+    ##         ^ constant.numeric.value.js
+    ##          ^^^ keyword.operator.range.puzzle
+    ##             ^ constant.numeric.value.js
+
     {#svg 'icons/heart.svg'}
    ##^ punctuation.definition.keyword.puzzle
     ##^^^ support.function.inline-svg.puzzle
@@ -221,6 +240,11 @@
     ##                         ^^^^^ entity.other.attribute-name.html
     ##                                    ^^^^^^^^^ source.js.embedded.puzzle
     ##                                                     ^^^^^^^ entity.name.tag.marker.puzzle
+      <Snippet user><b>{ user.name }</b></Snippet>
+    ## ^^^^^^^ entity.name.tag.marker.puzzle
+    ##         ^^^^ entity.other.attribute-name.html
+    ##                   ^^^^^^^^^ source.js.embedded.puzzle
+    ##                                    ^^^^^^^ entity.name.tag.marker.puzzle
     </UserList>
     ##^^^^^^^^ entity.name.tag.component.puzzle
 
@@ -232,6 +256,22 @@
     ##               ^^^^ entity.other.attribute-name.html
     ##                      ^^^^ source.js.embedded.puzzle
     ##                                   ^^^^ entity.name.tag.marker.puzzle
+
+    <Children user={ user }>fallback</Children>
+   ##^^^^^^^^ entity.name.tag.marker.puzzle
+    ##        ^^^^ entity.other.attribute-name.html
+    ##             ^ punctuation.section.embedded.begin.puzzle
+    ##               ^^^^ source.js.embedded.puzzle
+    ##                                ^^^^^^^^ entity.name.tag.marker.puzzle
+
+    ## a lowercase <snippet> is NOT flagged: the parser only steers it to
+    ## <Snippet> when it carries `fits` or a bare parameter, so a plain one is
+    ## ordinary markup. <slot>/<children>/<portal> always error; this does not.
+
+    <snippet class="sample">ordinary</snippet>
+   ##^^^^^^^ entity.name.tag.other.html
+   ##^^^^^^^ - invalid.illegal.marker.puzzle
+   ##^^^^^^^ - entity.name.tag.marker.puzzle
 
     ## a capitalized name that merely starts with a marker word is a component
 
@@ -430,6 +470,37 @@
 
     <div class="a {#raw}x"></div>
     ##            ^^^^^^ invalid.illegal.raw-in-attribute.puzzle
+
+
+    ## --- Brace escapes: \{ and \} --- ordinary template text only
+
+    ## the lexer drops the backslash and emits the literal brace, so \{ never
+    ## opens an interpolation
+
+    Use \{ braces \} literally
+    ##  ^^ constant.character.escape.puzzle
+    ##            ^^ constant.character.escape.puzzle
+    ##   ^ - punctuation.section.embedded.begin.puzzle
+    ##     ^^^^^^ - source.js.embedded.puzzle
+
+    ## an attribute value gets NO escape -- neither the quoted-value splitter
+    ## nor the brace-value scan handles a backslash, so the brace still opens
+    ## an interpolation and the backslash stays ordinary text
+
+    <p title="a \{ b }">x</p>
+    ##          ^^ - constant.character.escape.puzzle
+    ##           ^ punctuation.section.embedded.begin.puzzle
+    ##             ^ source.js.embedded.puzzle
+
+    <p class="a \{ b }">x</p>
+    ##          ^^ - constant.character.escape.puzzle
+    ##           ^ punctuation.section.embedded.begin.puzzle
+
+    ## a raw body gets no escape either: lexRawText does no backslash handling
+
+    {#raw}a \{ b{/raw}
+    ##      ^^ - constant.character.escape.puzzle
+    ##            ^^^ keyword.control.end.puzzle
 
   </article>
 </puzzle-view>
