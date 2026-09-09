@@ -472,7 +472,7 @@
     ##            ^^^^^^ invalid.illegal.raw-in-attribute.puzzle
 
 
-    ## --- Brace escapes: \{ and \} --- ordinary template text only
+    ## --- Brace escapes: \{ and \} --- text AND attribute values
 
     ## the lexer drops the backslash and emits the literal brace, so \{ never
     ## opens an interpolation
@@ -483,24 +483,45 @@
     ##   ^ - punctuation.section.embedded.begin.puzzle
     ##     ^^^^^^ - source.js.embedded.puzzle
 
-    ## an attribute value gets NO escape -- neither the quoted-value splitter
-    ## nor the brace-value scan handles a backslash, so the brace still opens
-    ## an interpolation and the backslash stays ordinary text
+    ## an attribute value escapes the same way -- buildAttr feeds every quoted
+    ## and unquoted value through parseAttrParts, whose parseSequence does the
+    ## same unescape, so this is how a literal brace is written in an attribute
 
-    <p title="a \{ b }">x</p>
-    ##          ^^ - constant.character.escape.puzzle
-    ##           ^ punctuation.section.embedded.begin.puzzle
-    ##             ^ source.js.embedded.puzzle
+    <input pattern="[0-9]\{5\}" title="a \{ b \}">
+    ##                   ^^ constant.character.escape.puzzle
+    ##                      ^^ constant.character.escape.puzzle
+    ##                     ^ - meta.interpolation.puzzle
+    ##                                   ^^ constant.character.escape.puzzle
+    ##                                        ^^ constant.character.escape.puzzle
 
-    <p class="a \{ b }">x</p>
-    ##          ^^ - constant.character.escape.puzzle
-    ##           ^ punctuation.section.embedded.begin.puzzle
+    ## class/id/href reach the expression grammar through a different HTML
+    ## extension point (strings-common-content), so pin one of those too
 
-    ## a raw body gets no escape either: lexRawText does no backslash handling
+    <p class="a \{ b \}">x</p>
+    ##          ^^ constant.character.escape.puzzle
+    ##               ^^ constant.character.escape.puzzle
+    ##             ^ - meta.interpolation.puzzle
+
+    ## an unquoted value takes the same token path
+
+    <input pattern=a\{b>
+    ##              ^^ constant.character.escape.puzzle
+
+    ## a brace-only value is a JS expression, not an attribute mini-grammar
+    ## value, so nothing inside it is a Puzzle brace escape
+
+    <p data-x={ '\{' }>y</p>
+    ##           ^^ - constant.character.escape.puzzle
+
+    ## a raw body gets no escape either: lexRawText does no backslash handling,
+    ## and buildAttr short-circuits every raw token to a verbatim value
 
     {#raw}a \{ b{/raw}
     ##      ^^ - constant.character.escape.puzzle
     ##            ^^^ keyword.control.end.puzzle
+
+    {#raw}<b pattern="a\{b">x</b>{/raw}
+    ##                 ^^ - constant.character.escape.puzzle
 
   </article>
 </puzzle-view>

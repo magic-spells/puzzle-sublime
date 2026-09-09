@@ -100,13 +100,10 @@ contexts:
     - include: puzzle-invalid-markers
 
   # HTML reaches `tag-other` only from `tag`, which only `html`/`main` include,
-  # so this prepend is the top-level TEXT scan — the one position where the
-  # \{ / \} escape is live. Everything else that pulls in puzzle-embedded is an
-  # attribute or CDATA position, so the escape rides puzzle-text-embedded here
-  # instead of puzzle-embedded itself.
+  # so this prepend is the top-level text scan.
   tag-other:
     - meta_prepend: true
-    - include: puzzle-text-embedded
+    - include: puzzle-embedded
 
   tag-attributes:
     - meta_prepend: true
@@ -342,23 +339,26 @@ contexts:
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 
-  # Ordinary template text, and nothing else. `\{` and `\}` are escapes ONLY
-  # here: the lexer's lexText drops the backslash and emits a literal brace, so
-  # `\{` never opens an interpolation. The escape is matched ahead of
-  # puzzle-embedded so it wins over {##, {#comment, {#raw and the bare `{`.
-  #
-  # It is deliberately NOT in puzzle-embedded, which attribute positions share:
-  # neither the quoted-value splitter (parseAttrParts) nor the brace-value scan
-  # handles backslashes, so `title="a \{ b"` keeps a literal backslash and its
-  # brace still opens an interpolation. A {#raw} body gets no escape either —
-  # lexRawText does no backslash handling at all — and it never reaches this
-  # context: puzzle-raw-block carries its own tag grammar.
-  puzzle-text-embedded:
+  puzzle-embedded:
+    # `\{` and `\}` produce a literal brace and open nothing. Matched first so
+    # the escape wins over {##, {#comment, {#raw and the bare `{` below.
+    #
+    # The escape is live in every position this context reaches: ordinary
+    # template text (lexText drops the backslash) and attribute values, quoted
+    # AND unquoted (buildAttr routes TokAttrQuoted/TokAttrBare through
+    # parseAttrParts, whose parseSequence does the same unescape) — which is
+    # why `pattern="[0-9]\{5\}"` is the way to write a literal brace in an
+    # attribute.
+    #
+    # The two positions where it is NOT live never reach here. A brace-only
+    # value (`data-x={ … }`) is a JS expression: buildAttr makes it a
+    # DynamicAttr and the grammar hands it to puzzle-interpolation-body, which
+    # does not include this context. A {#raw} body and its attributes are
+    # verbatim bytes (lexRawText does no backslash handling; buildAttr
+    # short-circuits every Raw token to a literal StaticAttr), and the
+    # puzzle-raw-* contexts carry their own tag grammar.
     - match: '\\[{}]'
       scope: constant.character.escape.puzzle
-    - include: puzzle-embedded
-
-  puzzle-embedded:
     # Template comments (v1.37, D70) are stripped by the compiler and never
     # parsed as markup. Both spellings open with a brace, so they must be
     # matched before the directive and interpolation rules below — {## also

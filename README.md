@@ -8,8 +8,8 @@ New in 0.7.0:
 - Dotted component-family tags — `<Frame.Wrapper>`, `<Frame.Inner.Deep/>` (D167)
 - The `<Snippet>` marker and its bare parameter attributes, plus marker
   arguments on `<Children>` and `<Slot>` — `<Children user={ user }>` (D166)
-- The `\{` / `\}` text escape, which renders a literal brace instead of opening
-  an interpolation
+- The `\{` / `\}` brace escape, which renders a literal brace instead of opening
+  an interpolation — in template text and in attribute values alike
 
 The package follows the same composition model as Sublime's Svelte syntax:
 
@@ -36,7 +36,7 @@ Both template sections support:
 - Compile-time SVG directives: `{#svg 'icons/heart.svg'}`
 - Template comments: `{## note }` and `{#comment} … {/comment}`
 - Raw blocks: `{#raw} … {/raw}`
-- Brace escapes in template text: `Use \{ braces \} literally`
+- Brace escapes: `Use \{ braces \} literally` and `pattern="[0-9]\{5\}"`
 - Dynamic attributes and expressions inside quoted attributes
 - Directive attributes: `key`, `island`, `ref`, `flip`
 - Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`,
@@ -60,10 +60,12 @@ are compile errors outside a raw block and are flagged as such. A lowercase
 `<Snippet>` when it carries `fits` or a bare parameter, so a plain one is
 ordinary markup.
 
-`\{` and `\}` are escapes in ordinary template text only, matching the lexer:
-`Use \{ braces \}` renders literal braces and opens no interpolation. Attribute
-values get no escape (`title="a \{ b }"` still interpolates), and neither does a
-`{#raw}` body.
+`\{` and `\}` render a literal brace and open no interpolation, matching the
+compiler: the escape is live in template text and in attribute values, quoted
+and unquoted alike — `pattern="[0-9]\{5\}"` is how a literal brace is written in
+an attribute, since `{#raw}` is not allowed there. It is not live in a
+brace-only value (`data-x={ … }` is a JavaScript expression) or in a `{#raw}`
+body, where every byte is verbatim.
 
 ## Install for development
 
@@ -121,7 +123,7 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-308 assertions covering the HTML template grammar, every shipped Puzzle
+314 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains, event modifiers, composition markers and their
 arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
 section boundaries.
