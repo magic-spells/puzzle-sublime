@@ -1,7 +1,7 @@
 # Puzzle syntax for Sublime Text
 
 Sublime Text 4 syntax highlighting for Puzzle single-file components (`.pzl`).
-Tracks the Puzzle **0.7.0** template grammar.
+Version **0.3.0** — tracks the Puzzle **0.7.0** template grammar.
 
 New in 0.7.0:
 
