@@ -104,6 +104,25 @@
     ##        ^ constant.numeric.value.js
     ##                           ^^^ keyword.control.end.puzzle
 
+    ## a counterless range header is the same shape
+
+    {#for 1...5}<b>x</b>{/for}
+    ##^^^ keyword.control.loop.puzzle
+    ##    ^ constant.numeric.value.js
+    ##     ^^^ keyword.operator.range.puzzle
+    ##        ^ constant.numeric.value.js
+
+    ## `{#for i in 1...5}` is a compile error in 0.7.0 -- write `{#for 1...5, i}`
+    ## instead. The grammar does not flag it, but the range operator must still
+    ## read as one token rather than eating the digits around it.
+
+    {#for i in 1...5}<b>x</b>{/for}
+    ##^^^ keyword.control.loop.puzzle
+    ##      ^^ keyword.operator.js
+    ##         ^ constant.numeric.value.js
+    ##          ^^^ keyword.operator.range.puzzle
+    ##             ^ constant.numeric.value.js
+
     {#svg 'icons/heart.svg'}
    ##^ punctuation.definition.keyword.puzzle
     ##^^^ support.function.inline-svg.puzzle
@@ -207,11 +226,80 @@
     ##                            ^^^^^^^ source.js.embedded.puzzle
     ##                                             ^^^^^^ entity.name.tag.marker.puzzle
 
+    ## --- Snippets (D166) --- <Snippet> is a caller-side marker; `fits`
+    ## routes it to a named position and every other attribute is a bare
+    ## parameter declaration
+
+    <UserList users={ users }>
+   ##^^^^^^^^ entity.name.tag.component.puzzle
+      <Snippet fits="row" user group><b>{ user.name }</b></Snippet>
+    ## ^^^^^^^ entity.name.tag.marker.puzzle
+    ## ^^^^^^^ - entity.name.tag.component.puzzle
+    ##         ^^^^ entity.other.attribute-name.html
+    ##                    ^^^^ entity.other.attribute-name.html
+    ##                         ^^^^^ entity.other.attribute-name.html
+    ##                                    ^^^^^^^^^ source.js.embedded.puzzle
+    ##                                                     ^^^^^^^ entity.name.tag.marker.puzzle
+      <Snippet user><b>{ user.name }</b></Snippet>
+    ## ^^^^^^^ entity.name.tag.marker.puzzle
+    ##         ^^^^ entity.other.attribute-name.html
+    ##                   ^^^^^^^^^ source.js.embedded.puzzle
+    ##                                    ^^^^^^^ entity.name.tag.marker.puzzle
+    </UserList>
+    ##^^^^^^^^ entity.name.tag.component.puzzle
+
+    ## a marker hands values out per stamp: on <Slot>/<Children> a valued
+    ## attribute is an argument, and the paired body stays a D141 fallback
+
+    <Slot name="row" user={ user }>none</Slot>
+   ##^^^^ entity.name.tag.marker.puzzle
+    ##               ^^^^ entity.other.attribute-name.html
+    ##                      ^^^^ source.js.embedded.puzzle
+    ##                                   ^^^^ entity.name.tag.marker.puzzle
+
+    <Children user={ user }>fallback</Children>
+   ##^^^^^^^^ entity.name.tag.marker.puzzle
+    ##        ^^^^ entity.other.attribute-name.html
+    ##             ^ punctuation.section.embedded.begin.puzzle
+    ##               ^^^^ source.js.embedded.puzzle
+    ##                                ^^^^^^^^ entity.name.tag.marker.puzzle
+
+    ## a lowercase <snippet> is NOT flagged: the parser only steers it to
+    ## <Snippet> when it carries `fits` or a bare parameter, so a plain one is
+    ## ordinary markup. <slot>/<children>/<portal> always error; this does not.
+
+    <snippet class="sample">ordinary</snippet>
+   ##^^^^^^^ entity.name.tag.other.html
+   ##^^^^^^^ - invalid.illegal.marker.puzzle
+   ##^^^^^^^ - entity.name.tag.marker.puzzle
+
     ## a capitalized name that merely starts with a marker word is a component
 
-    <Slotted/><PortalHost/>
+    <Slotted/><PortalHost/><SnippetHost/>
    ##^^^^^^^ entity.name.tag.component.puzzle
     ##         ^^^^^^^^^^ entity.name.tag.component.puzzle
+    ##                      ^^^^^^^^^^^ entity.name.tag.component.puzzle
+
+
+    ## --- Component families: dotted component tags (D167) --- a component
+    ## tag name is a member path, emitted verbatim as a JS member expression
+
+    <Frame.Wrapper class="dotted">
+   ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      <Frame.Content>{ title }</Frame.Content>
+     ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      ##                        ^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+      <Frame.Inner.Deep/>
+     ##^^^^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+    </Frame.Wrapper>
+    ##^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+
+    ## a dotted name rooted at a marker word is a component, not a marker:
+    ## markers are exact-match names, so <Slot.Custom/> falls through
+
+    <Slot.Custom/>
+   ##^^^^^^^^^^^ entity.name.tag.component.puzzle
+   ##^^^^^^^^^^^ - entity.name.tag.marker.puzzle
 
 
     ## --- Lowercase marker spellings are compile errors (D134/D144) ---
@@ -382,6 +470,58 @@
 
     <div class="a {#raw}x"></div>
     ##            ^^^^^^ invalid.illegal.raw-in-attribute.puzzle
+
+
+    ## --- Brace escapes: \{ and \} --- text AND attribute values
+
+    ## the lexer drops the backslash and emits the literal brace, so \{ never
+    ## opens an interpolation
+
+    Use \{ braces \} literally
+    ##  ^^ constant.character.escape.puzzle
+    ##            ^^ constant.character.escape.puzzle
+    ##   ^ - punctuation.section.embedded.begin.puzzle
+    ##     ^^^^^^ - source.js.embedded.puzzle
+
+    ## an attribute value escapes the same way -- buildAttr feeds every quoted
+    ## and unquoted value through parseAttrParts, whose parseSequence does the
+    ## same unescape, so this is how a literal brace is written in an attribute
+
+    <input pattern="[0-9]\{5\}" title="a \{ b \}">
+    ##                   ^^ constant.character.escape.puzzle
+    ##                      ^^ constant.character.escape.puzzle
+    ##                     ^ - meta.interpolation.puzzle
+    ##                                   ^^ constant.character.escape.puzzle
+    ##                                        ^^ constant.character.escape.puzzle
+
+    ## class/id/href reach the expression grammar through a different HTML
+    ## extension point (strings-common-content), so pin one of those too
+
+    <p class="a \{ b \}">x</p>
+    ##          ^^ constant.character.escape.puzzle
+    ##               ^^ constant.character.escape.puzzle
+    ##             ^ - meta.interpolation.puzzle
+
+    ## an unquoted value takes the same token path
+
+    <input pattern=a\{b>
+    ##              ^^ constant.character.escape.puzzle
+
+    ## a brace-only value is a JS expression, not an attribute mini-grammar
+    ## value, so nothing inside it is a Puzzle brace escape
+
+    <p data-x={ '\{' }>y</p>
+    ##           ^^ - constant.character.escape.puzzle
+
+    ## a raw body gets no escape either: lexRawText does no backslash handling,
+    ## and buildAttr short-circuits every raw token to a verbatim value
+
+    {#raw}a \{ b{/raw}
+    ##      ^^ - constant.character.escape.puzzle
+    ##            ^^^ keyword.control.end.puzzle
+
+    {#raw}<b pattern="a\{b">x</b>{/raw}
+    ##                 ^^ - constant.character.escape.puzzle
 
   </article>
 </puzzle-view>
