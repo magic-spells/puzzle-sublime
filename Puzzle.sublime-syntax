@@ -313,14 +313,14 @@ contexts:
         4: invalid.illegal.event-modifier.puzzle
       push:
         - tag-generic-attribute-meta
-        - tag-generic-attribute-assignment
+        - puzzle-event-attribute-assignment
     - match: '(@)({{puzzle_identifier}}(?:[.-][A-Za-z0-9_-]+)*)'
       captures:
         1: keyword.operator.event.puzzle
         2: entity.other.attribute-name.event.puzzle
       push:
         - tag-generic-attribute-meta
-        - tag-generic-attribute-assignment
+        - puzzle-event-attribute-assignment
         - puzzle-event-modifiers
 
   puzzle-event-modifiers:
@@ -336,6 +336,34 @@ contexts:
     - match: '{{attribute_name_break}}'
       pop: 1
     - include: immediately-pop
+
+  # An @event value is a handler body, not a template value position: the
+  # compiler takes it verbatim as JavaScript and never runs the formatter
+  # chain over it, so `@click={ a | b }` is a bitwise OR. The brace-only form
+  # is the only legal spelling (`={ ... }`); anything else falls back to the
+  # generic HTML value so an erroneous quoted value still reads as a string.
+  puzzle-event-attribute-assignment:
+    - meta_include_prototype: false
+    - match: '='
+      scope: punctuation.separator.key-value.html
+      set: puzzle-event-attribute-value
+    - include: else-pop
+
+  puzzle-event-attribute-value:
+    - meta_include_prototype: false
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      set: puzzle-event-handler-body
+    - match: '(?=\S)'
+      set: tag-generic-attribute-value
+
+  puzzle-event-handler-body:
+    - meta_scope: meta.interpolation.puzzle
+    - meta_content_scope: source.js.embedded.puzzle
+    - match: '\}'
+      scope: punctuation.section.embedded.end.puzzle
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#expressions
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 
@@ -399,11 +427,14 @@ contexts:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
       pop: 1
+    # The {#for} header and {:when} values take no formatter chain (D173 V1):
+    # a top-level `|` in either is a compile error, so they get the no-pipe
+    # body, which sits on top of puzzle-directive-body until the closing `}`.
     - match: '(#)(for)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.loop.puzzle
-      pop: 1
+      set: puzzle-directive-nopipe-body
     - match: '(#)(svg)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -429,7 +460,7 @@ contexts:
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
-      pop: 1
+      set: puzzle-directive-nopipe-body
     - match: '(:)(else)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -458,7 +489,14 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#expressions
+    - include: scope:source.js.embedded.puzzle#puzzle-expressions
+
+  # Parked on puzzle-directive-body, whose meta scopes still apply, and pops
+  # without consuming the `}` so that context closes the directive as usual.
+  puzzle-directive-nopipe-body:
+    - match: '(?=\})'
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#puzzle-nopipe-expressions
 
   puzzle-interpolation-body:
     - clear_scopes: 1
@@ -467,7 +505,7 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#expressions
+    - include: scope:source.js.embedded.puzzle#puzzle-expressions
 
 ###[ RAW BLOCK ]##############################################################
 

@@ -10,40 +10,117 @@ hidden: true
 
 extends: Packages/JavaScript/JavaScript.sublime-syntax
 
+variables:
+  # isFormatterName in the compiler: `[A-Za-z_$]` then `[A-Za-z0-9_$-]*`. ASCII
+  # only, and `-` is legal after the first character (`blank-ish`).
+  puzzle_formatter_name: '[A-Za-z_$][A-Za-z0-9_$-]*'
+  # A formatter pipe is a single `|`: `||` stays logical OR, `|=` and `||=`
+  # stay assignment. No lookbehind is needed (and Sublime's sregex engine does
+  # not support one): binary-operators consumes `||` whole, so its second
+  # character is never a match position.
+  puzzle_pipe: '\|(?![|=])'
+
 contexts:
-  # Kept explicit for Sublime builds whose JavaScript package does not expose
-  # an expression-list entry point compatible with embedded syntaxes.
-  expressions:
+  # Entry points. The Puzzle grammar includes exactly one of these per brace
+  # position, and never JavaScript's own `expressions`:
+  #
+  #   puzzle-expressions         a value position — text and attribute
+  #                              interpolation, brace-only attribute values,
+  #                              component props, marker arguments, and the
+  #                              {#if}/{:else if}/{#unless}/{#case} headers.
+  #                              A top-level `|` is a formatter pipe (D173 V1).
+  #   puzzle-nopipe-expressions  the {#for} header and {:when} values. A
+  #                              top-level `|` there is a compile error.
+  #   expressions (native)       @event handler bodies: plain JavaScript, so
+  #                              `|` is bitwise OR.
+  #
+  # "Top-level" is the compiler's rule (splitTopLevel): a `|` inside a string,
+  # regex, parentheses, brackets or braces is not a split point. Only the
+  # outermost expression-end frame below knows about pipes; every nested frame
+  # — a group, call arguments, an array, an object literal, a subscript — is
+  # pushed by native JavaScript rules with the native expression-end, where
+  # `|` is bitwise OR. That is also why `{ t({ name: user.name }) }` needs no
+  # special handling: the inner braces are JavaScript's own object literal and
+  # balance there, so the interpolation still closes on the outer `}`.
+  puzzle-expressions:
     - match: '(?=\S)'
-      push: [expression-end, expression-begin]
+      push: [puzzle-expression-end, expression-begin]
 
-  expression-begin:
-    - meta_prepend: true
-    # Native JavaScript accepts `1.` as a float, so without this guard it eats
-    # the first dot in Puzzle's `1...4` range before expression-end can see the
-    # range operator. Pop exactly like JavaScript's native number rules do.
-    - match: '{{dec_integer}}(?=\.\.\.)'
-      scope: meta.number.integer.decimal.js constant.numeric.value.js
-      pop: 1
+  puzzle-nopipe-expressions:
+    - match: '(?=\S)'
+      push: [puzzle-nopipe-expression-end, expression-begin]
 
-  expression-end:
-    - meta_prepend: true
-    # Puzzle's inclusive range form: {#for 1...5, n}
+  # JavaScript's expression-end with the formatter pipe in front. Binary
+  # operators push expression-begin on top of this frame, so it survives the
+  # whole top-level expression; the ternary replaces its frame with `set`, so
+  # it has a Puzzle copy that restores this one after the `:`.
+  puzzle-expression-end:
+    - match: '{{puzzle_pipe}}'
+      scope: keyword.operator.formatter.puzzle
+      push: puzzle-formatter-name
+    - include: puzzle-range-operator
+    - include: postfix-operators
+    - include: binary-operators
+    - include: puzzle-ternary-operator
+    - include: left-expression-end
+
+  puzzle-nopipe-expression-end:
+    - match: '{{puzzle_pipe}}'
+      scope: invalid.illegal.formatter.puzzle
+      push: puzzle-formatter-name
+    - include: puzzle-range-operator
+    - include: postfix-operators
+    - include: binary-operators
+    - include: puzzle-nopipe-ternary-operator
+    - include: left-expression-end
+
+  puzzle-ternary-operator:
+    - match: '\?(?=[^.]|\.[0-9])'
+      scope: keyword.operator.ternary.js
+      set:
+        - puzzle-ternary-operator-expect-colon
+        - expression-no-comma
+
+  puzzle-ternary-operator-expect-colon:
+    - match: ':'
+      scope: keyword.operator.ternary.js
+      set: [puzzle-expression-end, expression-begin]
+    - include: else-pop
+
+  puzzle-nopipe-ternary-operator:
+    - match: '\?(?=[^.]|\.[0-9])'
+      scope: keyword.operator.ternary.js
+      set:
+        - puzzle-nopipe-ternary-operator-expect-colon
+        - expression-no-comma
+
+  puzzle-nopipe-ternary-operator-expect-colon:
+    - match: ':'
+      scope: keyword.operator.ternary.js
+      set: [puzzle-nopipe-expression-end, expression-begin]
+    - include: else-pop
+
+  # Puzzle's inclusive range form: {#for 1...5, n}
+  puzzle-range-operator:
     - match: '\.\.\.'
       scope: keyword.operator.range.puzzle
       push: expression-begin
 
-  binary-operators:
+  expression-begin:
     - meta_prepend: true
-    # A single pipe is a formatter boundary in Puzzle. Logical OR and |= stay
-    # under the native JavaScript grammar.
-    - match: '(?<!\|)\|(?![|=])'
-      scope: keyword.operator.formatter.puzzle
-      push: puzzle-formatter-name
+    # Native JavaScript accepts `1.` as a float, so without this guard it eats
+    # the first dot in Puzzle's `1...4` range before the range operator can be
+    # seen. Pop exactly like JavaScript's native number rules do.
+    - match: '{{dec_integer}}(?=\.\.\.)'
+      scope: meta.number.integer.decimal.js constant.numeric.value.js
+      pop: 1
 
+  # The name after a pipe, bare or called: `| trim`, `| currency('$', 2)`. The
+  # argument list is matched afterwards by the frame underneath, as an ordinary
+  # call, so object-literal arguments (`| t({ name })`) are native JavaScript.
   puzzle-formatter-name:
     - meta_include_prototype: false
-    - match: '\s*([_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*)'
+    - match: '\s*({{puzzle_formatter_name}})'
       captures:
         1: variable.function.formatter.puzzle
       pop: 1

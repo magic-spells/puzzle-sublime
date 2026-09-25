@@ -1,7 +1,22 @@
 # Puzzle syntax for Sublime Text
 
 Sublime Text 4 syntax highlighting for Puzzle single-file components (`.pzl`).
-Tracks the Puzzle **0.7.0** template grammar.
+Version **0.4.0** — tracks the Puzzle **0.8.0** template grammar.
+
+New in 0.8.0:
+
+- Formatter chains in every value position (D173) — brace-only attribute
+  values (`title={ price | currency }`), component props and marker arguments,
+  and the `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers, alongside
+  text and quoted-attribute interpolation
+- Only a top-level single `|` is a pipe: inside parentheses, call arguments or
+  brackets it is JavaScript's bitwise OR, and an `@event` handler body is plain
+  JavaScript throughout
+- Formatter names may contain `-` after the first character (`blank-ish`)
+- A pipe in a `{#for}` header or a `{:when}` value is a compile error and is
+  flagged as one
+- Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
+  JavaScript, never a nested interpolation
 
 New in 0.7.0:
 
@@ -28,7 +43,10 @@ the entire file.
 Both template sections support:
 
 - JavaScript interpolation: `{ user.name }`
-- Formatter chains: `{ price | currency('$', 2) | trim }`
+- Formatter chains: `{ price | currency('$', 2) | trim }`, in every value
+  position — text and attribute interpolation, brace-only attribute values
+  (`title={ price | currency }`), component props, marker arguments, and the
+  `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers
 - Conditionals: `{#if}`, `{:else if}`, `{:else}`, `{/if}`
 - Inverted conditionals: `{#unless}` and `{/unless}`
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
@@ -116,6 +134,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
+| Pipe in a `{#for}` header or `{:when}` value | `invalid.illegal.formatter.puzzle` |
 
 ## Tests
 
@@ -123,8 +142,9 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-314 assertions covering the HTML template grammar, every shipped Puzzle
-directive, formatter chains, event modifiers, composition markers and their
+419 assertions covering the HTML template grammar, every shipped Puzzle
+directive, formatter chains in every value position (and the positions where a
+pipe is JavaScript or an error), event modifiers, composition markers and their
 arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
 section boundaries.
 
@@ -150,3 +170,9 @@ script section, so a `<script type="application/json">` used as a data island
 inside the template embeds JavaScript, and a `{#raw}` block written inside it is
 highlighted as JavaScript rather than as a raw body. Raw blocks in ordinary
 template text are unaffected.
+
+Formatter pipes follow the compiler's top-level rule by grammar structure, not
+by counting brackets, so one edge differs: a `|` in the middle branch of a
+ternary (`{ a ? b | x : c }`) reads as bitwise OR, where the compiler splits
+there and rejects `x : c` as a formatter name. A pipe after the ternary's last
+branch (`{ on ? a : b | upcase }`) is a formatter, as it should be.
