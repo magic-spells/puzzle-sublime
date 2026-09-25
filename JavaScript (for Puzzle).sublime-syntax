@@ -19,6 +19,11 @@ variables:
   # not support one): binary-operators consumes `||` whole, so its second
   # character is never a match position.
   puzzle_pipe: '\|(?![|=])'
+  # What follows a pipe must be a formatter name, bare or called, and then the
+  # end of the chain step: `(`, the next `|`, the closing `}`, or the end of the
+  # line (a chain continued below). Anything else — `| 0`, `| f g`, `| f.g`,
+  # `|= 2` — is a compile error (notFormatterError in the compiler).
+  puzzle_formatter_step: '\s*{{puzzle_formatter_name}}\s*(?:[(|}]|$)'
 
 contexts:
   # Entry points. The Puzzle grammar includes exactly one of these per brace
@@ -55,6 +60,7 @@ contexts:
   # whole top-level expression; the ternary replaces its frame with `set`, so
   # it has a Puzzle copy that restores this one after the `:`.
   puzzle-expression-end:
+    - include: puzzle-invalid-pipe
     - match: '{{puzzle_pipe}}'
       scope: keyword.operator.formatter.puzzle
       push: puzzle-formatter-name
@@ -65,14 +71,28 @@ contexts:
     - include: left-expression-end
 
   puzzle-nopipe-expression-end:
+    - include: puzzle-invalid-pipe
+    # Every top-level pipe is an error here, so the name after it is read as
+    # plain JavaScript rather than given the formatter scope.
     - match: '{{puzzle_pipe}}'
       scope: invalid.illegal.formatter.puzzle
-      push: puzzle-formatter-name
+      push: expression-begin
     - include: puzzle-range-operator
     - include: postfix-operators
     - include: binary-operators
     - include: puzzle-nopipe-ternary-operator
     - include: left-expression-end
+
+  # A pipe in a value position that cannot start a formatter step. Listed
+  # ahead of binary-operators, which would otherwise read it as bitwise OR or
+  # `|=` assignment. The operand after it is ordinary JavaScript.
+  puzzle-invalid-pipe:
+    - match: '\|='
+      scope: invalid.illegal.formatter.puzzle
+      push: expression-begin
+    - match: '\|(?![|=])(?!{{puzzle_formatter_step}})'
+      scope: invalid.illegal.formatter.puzzle
+      push: expression-begin
 
   puzzle-ternary-operator:
     - match: '\?(?=[^.]|\.[0-9])'

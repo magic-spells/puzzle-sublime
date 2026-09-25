@@ -14,7 +14,8 @@ New in 0.8.0:
   JavaScript throughout
 - Formatter names may contain `-` after the first character (`blank-ish`)
 - A pipe in a `{#for}` header or a `{:when}` value is a compile error and is
-  flagged as one
+  flagged as one, as is a pipe not followed by a formatter name
+  (`{ w / 2 | 0 }`, `{ x |= 2 }`, `{ x | f g }`, `{ x | f.g }`)
 - Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
   JavaScript, never a nested interpolation
 
@@ -134,7 +135,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
-| Pipe in a `{#for}` header or `{:when}` value | `invalid.illegal.formatter.puzzle` |
+| Pipe in a `{#for}` header or `{:when}` value, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
 
 ## Tests
 
@@ -142,7 +143,7 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-419 assertions covering the HTML template grammar, every shipped Puzzle
+442 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains in every value position (and the positions where a
 pipe is JavaScript or an error), event modifiers, composition markers and their
 arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS

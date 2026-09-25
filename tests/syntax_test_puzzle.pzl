@@ -685,6 +685,43 @@
   ##                  ^^ keyword.operator.logical.js
   ##                  ^^ - invalid.illegal.formatter.puzzle
 
+    ## --- What follows a pipe must be a formatter name (D173 V1) --- `| 0`,
+    ## `|= 2`, `| f g` and `| f.g` are compile errors, in text and attributes alike
+
+    { w / 2 | 0 } { x |= 2 } { x | f g } { x | f.g } { x | ok }
+  ##        ^ invalid.illegal.formatter.puzzle
+  ##          ^ constant.numeric
+  ##                  ^^ invalid.illegal.formatter.puzzle
+  ##                             ^ invalid.illegal.formatter.puzzle
+  ##                               ^ - variable.function.formatter.puzzle
+  ##                                         ^ invalid.illegal.formatter.puzzle
+  ##                                           ^ - variable.function.formatter.puzzle
+  ##                                                     ^ keyword.operator.formatter.puzzle
+  ##                                                     ^ - invalid.illegal.formatter.puzzle
+  ##                                                       ^^ variable.function.formatter.puzzle
+
+    <a title={ n | 0 } data-x={ a | b.c } data-y={ a | f(1) | g }>x</a>
+  ##             ^ invalid.illegal.formatter.puzzle
+  ##                              ^ invalid.illegal.formatter.puzzle
+  ##                                                 ^ keyword.operator.formatter.puzzle
+  ##                                                 ^ - invalid.illegal.formatter.puzzle
+  ##                                                        ^ keyword.operator.formatter.puzzle
+  ##                                                          ^ variable.function.formatter.puzzle
+
+    {#if n | 1}<b>n</b>{/if}{ a || b }
+  ##       ^ invalid.illegal.formatter.puzzle
+  ##                            ^^ keyword.operator.logical.js
+  ##                            ^^ - invalid.illegal.formatter.puzzle
+
+    ## in a {#for} header or a {:when} value every pipe is the error, so the
+    ## name after it is plain JavaScript, not a formatter
+
+    {#for item in items | sort}<i>{ item }</i>{/for}{#case s}{:when 'a' | x}<b>a</b>{/case}
+  ##                    ^ invalid.illegal.formatter.puzzle
+  ##                      ^^^^ - variable.function.formatter.puzzle
+  ##                                                                    ^ invalid.illegal.formatter.puzzle
+  ##                                                                      ^ - variable.function.formatter.puzzle
+
 
     ## --- <pre> keeps its whitespace (D168) --- nothing collapses; interpolation
     ## reads the same inside it
