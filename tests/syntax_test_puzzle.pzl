@@ -523,6 +523,227 @@
     {#raw}<b pattern="a\{b">x</b>{/raw}
     ##                 ^^ - constant.character.escape.puzzle
 
+
+    ## --- Formatter chains in every value position (D173 V1) --- a top-level
+    ## single `|` is a pipe in text and quoted-attribute interpolation, brace-only
+    ## attribute values, component props, marker arguments, and the {#if},
+    ## {:else if}, {#unless} and {#case} headers
+
+    <p title={ price | currency } class={ theme | downcase } key={ row.id | json }>x</p>
+  ##         ^ punctuation.section.embedded.begin.puzzle
+  ##                 ^ keyword.operator.formatter.puzzle
+  ##                   ^^^^^^^^ variable.function.formatter.puzzle
+  ##                            ^ punctuation.section.embedded.end.puzzle
+  ##                                            ^ keyword.operator.formatter.puzzle
+  ##                                              ^^^^^^^^ variable.function.formatter.puzzle
+  ##                                                         ^^^ entity.other.attribute-name.directive.puzzle
+  ##                                                                      ^ keyword.operator.formatter.puzzle
+  ##                                                                        ^^^^ variable.function.formatter.puzzle
+
+    <Card total={ n | currency('$', 0) } label={ title | truncate(20) | upcase } />
+  ## ^^^^ entity.name.tag.component.puzzle
+  ##                ^ keyword.operator.formatter.puzzle
+  ##                  ^^^^^^^^ variable.function.formatter.puzzle
+  ##                           ^^^ string.quoted.single.js
+  ##                                                   ^ keyword.operator.formatter.puzzle
+  ##                                                     ^^^^^^^^ variable.function.formatter.puzzle
+  ##                                                                  ^ keyword.operator.formatter.puzzle
+  ##                                                                    ^^^^^^ variable.function.formatter.puzzle
+
+    ## marker arguments take a chain; a formatter name may carry `-` after its
+    ## first character (`pick-name` here, `blank-ish` below)
+
+    <Children user={ user | upcase }>fallback</Children>
+  ## ^^^^^^^^ entity.name.tag.marker.puzzle
+  ##                      ^ keyword.operator.formatter.puzzle
+  ##                        ^^^^^^ variable.function.formatter.puzzle
+  ##                                 ^^^^^^^^ - source.js.embedded.puzzle
+    <Slot name="row" user={ user | pick-name }/>
+  ## ^^^^ entity.name.tag.marker.puzzle
+  ##                             ^ keyword.operator.formatter.puzzle
+  ##                               ^^^^^^^^^ variable.function.formatter.puzzle
+
+    {#if post.tags | size}<b>tagged</b>{:else if a | size}<i>a</i>{/if}
+  ##  ^^ keyword.control.conditional.puzzle
+  ##               ^ keyword.operator.formatter.puzzle
+  ##                 ^^^^ variable.function.formatter.puzzle
+  ##                                          ^^ keyword.control.conditional.if.puzzle
+  ##                                               ^ keyword.operator.formatter.puzzle
+  ##                                                 ^^^^ variable.function.formatter.puzzle
+    {#unless x | blank-ish}<b>shown</b>{/unless}
+  ##  ^^^^^^ keyword.control.conditional.puzzle
+  ##           ^ keyword.operator.formatter.puzzle
+  ##             ^^^^^^^^^ variable.function.formatter.puzzle
+    {#case status | downcase}{:when 'on'}<b>on</b>{/case}
+  ##  ^^^^ keyword.control.conditional.puzzle
+  ##              ^ keyword.operator.formatter.puzzle
+  ##                ^^^^^^^^ variable.function.formatter.puzzle
+  ##                                ^^^^ string.quoted.single.js
+
+    ## the inline {#if} inside a quoted attribute value takes a chain too
+
+    <button class="btn {#if tags | size}has-tags{/if}">x</button>
+  ##                   ^ punctuation.section.embedded.begin.puzzle
+  ##                     ^^ keyword.control.conditional.puzzle
+  ##                             ^ keyword.operator.formatter.puzzle
+  ##                               ^^^^ variable.function.formatter.puzzle
+  ##                                    ^^^^^^^^ - source.js.embedded.puzzle
+  ##                                              ^^ keyword.control.end.puzzle
+
+    ## `||` stays logical OR -- in text and in a brace-only value alike
+
+    <p title={ a || b }>{ a || b }</p>
+  ##             ^^ keyword.operator.logical.js
+  ##             ^^ - keyword.operator.formatter.puzzle
+  ##                        ^^ keyword.operator.logical.js
+  ##                        ^^ - keyword.operator.formatter.puzzle
+
+    ## a pipe inside a group, call arguments or a subscript is not top-level,
+    ## so it is JavaScript bitwise OR
+
+    { (flags | mask) } { pick(a | b) } { list[a | b] }
+  ##         ^ keyword.operator.bitwise.js
+  ##         ^ - keyword.operator.formatter.puzzle
+  ##                            ^ keyword.operator.bitwise.js
+  ##                            ^ - keyword.operator.formatter.puzzle
+  ##                                            ^ keyword.operator.bitwise.js
+  ##                                            ^ - keyword.operator.formatter.puzzle
+
+    ## a ternary's branches are top-level too, so the chain resumes after one
+
+    { on ? a : b | upcase }
+  ##     ^ keyword.operator.ternary.js
+  ##             ^ keyword.operator.formatter.puzzle
+  ##               ^^^^^^ variable.function.formatter.puzzle
+
+    ## an @event value is a handler body, not a value position: plain JavaScript
+
+    <button @click={ a | b } @input={ mask |= 1 }>x</button>
+  ##               ^ punctuation.section.embedded.begin.puzzle
+  ##                   ^ keyword.operator.bitwise.js
+  ##                   ^ - keyword.operator.formatter.puzzle
+  ##                       ^ punctuation.section.embedded.end.puzzle
+  ##                                       ^^ keyword.operator.assignment.augmented.js
+
+
+    ## --- Object literals in arguments (D173 V8) --- the inner braces are
+    ## JavaScript, not a nested interpolation, and the outer `}` still closes
+
+    <p>{ 'greeting' | t({ name: user.name }) } after</p>
+  ##                ^ keyword.operator.formatter.puzzle
+  ##                  ^ variable.function.formatter.puzzle
+  ##                    ^ punctuation.section.mapping.begin.js
+  ##                    ^ - punctuation.section.embedded.begin.puzzle
+  ##                                      ^ punctuation.section.mapping.end.js
+  ##                                         ^ punctuation.section.embedded.end.puzzle
+  ##                                           ^^^^^ - source.js.embedded.puzzle
+  ##                                                  ^ entity.name.tag.block.any.html
+
+    <img alt={ photo | resize({ height: 480 }) } src="x">
+  ##                 ^ keyword.operator.formatter.puzzle
+  ##                   ^^^^^^ variable.function.formatter.puzzle
+  ##                          ^ meta.mapping.js
+  ##                                           ^ punctuation.section.embedded.end.puzzle
+  ##                                             ^^^ entity.other.attribute-name
+
+    <button @click={ save({ id: todo.id }) }>save</button>
+  ##                      ^ punctuation.section.mapping.begin.js
+  ##                      ^ - punctuation.section.embedded.begin.puzzle
+  ##                                       ^ punctuation.section.embedded.end.puzzle
+  ##                                        ^ punctuation.definition.tag.end.html
+  ##                                         ^^^^ - source.js.embedded.puzzle
+
+    <p>{ fn({ a: 1 }) } tail</p>
+  ##        ^ meta.mapping.js
+  ##                  ^ punctuation.section.embedded.end.puzzle
+  ##                    ^^^^ - source.js.embedded.puzzle
+
+
+    ## --- Pipes are compile errors in a {#for} header and in {:when} values ---
+
+    {#for item in items | sort}<i>{ item }</i>{/for}
+  ##  ^^^ keyword.control.loop.puzzle
+  ##           ^^ keyword.operator.js
+  ##                    ^ invalid.illegal.formatter.puzzle
+  ##                          ^ punctuation.section.embedded.end.puzzle
+  ##                                            ^^^ keyword.control.end.puzzle
+
+    {#for 1...n | clamp, i}<i>{ i }</i>{/for}
+  ##       ^^^ keyword.operator.range.puzzle
+  ##            ^ invalid.illegal.formatter.puzzle
+
+    {#case s}{:when 'a' | x}<b>a</b>{:when (mask | 1)}<b>b</b>{/case}
+  ##           ^^^^ keyword.control.conditional.puzzle
+  ##                    ^ invalid.illegal.formatter.puzzle
+  ##                                  ^^^^ keyword.control.conditional.puzzle
+  ##                                             ^ keyword.operator.bitwise.js
+  ##                                             ^ - invalid.illegal.formatter.puzzle
+
+    ## the ban is on the pipe, not on OR: `||` is fine in a loop header
+
+    {#for row in rows || []}<i>{ row }</i>{/for}
+  ##                  ^^ keyword.operator.logical.js
+  ##                  ^^ - invalid.illegal.formatter.puzzle
+
+    ## --- What follows a pipe must be a formatter name (D173 V1) --- `| 0`,
+    ## `|= 2`, `| f g` and `| f.g` are compile errors, in text and attributes alike
+
+    { w / 2 | 0 } { x |= 2 } { x | f g } { x | f.g } { x | ok }
+  ##        ^ invalid.illegal.formatter.puzzle
+  ##          ^ constant.numeric
+  ##                  ^^ invalid.illegal.formatter.puzzle
+  ##                             ^ invalid.illegal.formatter.puzzle
+  ##                               ^ - variable.function.formatter.puzzle
+  ##                                         ^ invalid.illegal.formatter.puzzle
+  ##                                           ^ - variable.function.formatter.puzzle
+  ##                                                     ^ keyword.operator.formatter.puzzle
+  ##                                                     ^ - invalid.illegal.formatter.puzzle
+  ##                                                       ^^ variable.function.formatter.puzzle
+
+    <a title={ n | 0 } data-x={ a | b.c } data-y={ a | f(1) | g }>x</a>
+  ##             ^ invalid.illegal.formatter.puzzle
+  ##                              ^ invalid.illegal.formatter.puzzle
+  ##                                                 ^ keyword.operator.formatter.puzzle
+  ##                                                 ^ - invalid.illegal.formatter.puzzle
+  ##                                                        ^ keyword.operator.formatter.puzzle
+  ##                                                          ^ variable.function.formatter.puzzle
+
+    {#if n | 1}<b>n</b>{/if}{ a || b }
+  ##       ^ invalid.illegal.formatter.puzzle
+  ##                            ^^ keyword.operator.logical.js
+  ##                            ^^ - invalid.illegal.formatter.puzzle
+
+    ## in a {#for} header or a {:when} value every pipe is the error, so the
+    ## name after it is plain JavaScript, not a formatter
+
+    {#for item in items | sort}<i>{ item }</i>{/for}{#case s}{:when 'a' | x}<b>a</b>{/case}
+  ##                    ^ invalid.illegal.formatter.puzzle
+  ##                      ^^^^ - variable.function.formatter.puzzle
+  ##                                                                    ^ invalid.illegal.formatter.puzzle
+  ##                                                                      ^ - variable.function.formatter.puzzle
+
+
+    ## --- <pre> keeps its whitespace (D168) --- nothing collapses; interpolation
+    ## reads the same inside it
+
+    <pre>
+      line one    { value | upcase }
+  ##          ^^^^ - meta.interpolation.puzzle
+  ##              ^ punctuation.section.embedded.begin.puzzle
+  ##                      ^ keyword.operator.formatter.puzzle
+  ##                        ^^^^^^ variable.function.formatter.puzzle
+          indented   { count }  text
+  ##                 ^ punctuation.section.embedded.begin.puzzle
+  ##                   ^^^^^ source.js.embedded.puzzle
+  ##                            ^^^^ - source.js.embedded.puzzle
+    </pre>
+    <textarea>
+      draft   { body | trim }
+  ##                 ^ keyword.operator.formatter.puzzle
+  ##                   ^^^^ variable.function.formatter.puzzle
+    </textarea>
+
+
   </article>
 </puzzle-view>
 ##^^^^^^^^^^^ entity.name.tag.section.puzzle
