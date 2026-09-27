@@ -7,14 +7,18 @@ New in 0.8.0:
 
 - Formatter chains in every value position (D173) — brace-only attribute
   values (`title={ price | currency }`), component props and marker arguments,
-  and the `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers, alongside
-  text and quoted-attribute interpolation
+  alongside text and quoted-attribute interpolation
 - Only a top-level single `|` is a pipe: inside parentheses, call arguments or
   brackets it is JavaScript's bitwise OR, and an `@event` handler body is plain
   JavaScript throughout
 - Formatter names may contain `-` after the first character (`blank-ish`)
-- A pipe in a `{#for}` header or a `{:when}` value is a compile error and is
-  flagged as one, as is a pipe not followed by a formatter name
+- Block headers take no formatter chain: a pipe in an `{#if}`, `{:else if}`,
+  `{#unless}` or `{#case}` condition (including an inline `{#if}` in a quoted
+  attribute value), a `{#for}` header or a `{:when}` value is a compile error
+  and is flagged as one. Compute the value in `data()` and test that field
+  (`{#if hasTags}`); `||` stays logical OR there, and `(flags | mask)` stays
+  bitwise OR
+- A pipe not followed by a formatter name is flagged as a compile error too
   (`{ w / 2 | 0 }`, `{ x |= 2 }`, `{ x | f g }`, `{ x | f.g }`)
 - Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
   JavaScript, never a nested interpolation
@@ -46,8 +50,9 @@ Both template sections support:
 - JavaScript interpolation: `{ user.name }`
 - Formatter chains: `{ price | currency('$', 2) | trim }`, in every value
   position — text and attribute interpolation, brace-only attribute values
-  (`title={ price | currency }`), component props, marker arguments, and the
-  `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers
+  (`title={ price | currency }`), component props and marker arguments. Block
+  headers (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`)
+  take none: a pipe there is flagged as an error
 - Conditionals: `{#if}`, `{:else if}`, `{:else}`, `{/if}`
 - Inverted conditionals: `{#unless}` and `{/unless}`
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
@@ -135,7 +140,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
-| Pipe in a `{#for}` header or `{:when}` value, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
+| Pipe in a block header (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`), or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
 
 ## Tests
 
@@ -143,7 +148,7 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-442 assertions covering the HTML template grammar, every shipped Puzzle
+471 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains in every value position (and the positions where a
 pipe is JavaScript or an error), event modifiers, composition markers and their
 arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS

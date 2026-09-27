@@ -422,14 +422,19 @@ contexts:
 
   puzzle-directive-begin:
     - meta_include_prototype: false
+    # Block headers take no formatter chain (D173 V1): a top-level `|` in an
+    # {#if}, {:else if}, {#unless} or {#case} condition, a {#for} header or a
+    # {:when} value is a compile error — formatters belong in value positions,
+    # not in logic. Each of these headers gets the no-pipe body, which sits on
+    # top of puzzle-directive-body until the closing `}`. `||` stays logical
+    # OR, and a `|` inside parentheses, brackets or strings is plain JavaScript.
+    # This covers the inline {#if} in a quoted attribute value too, which
+    # reaches this context through puzzle-embedded like any other directive.
     - match: '(#)(if|unless|case)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
-      pop: 1
-    # The {#for} header and {:when} values take no formatter chain (D173 V1):
-    # a top-level `|` in either is a compile error, so they get the no-pipe
-    # body, which sits on top of puzzle-directive-body until the closing `}`.
+      set: puzzle-directive-nopipe-body
     - match: '(#)(for)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -455,7 +460,7 @@ contexts:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.else.puzzle
         4: keyword.control.conditional.if.puzzle
-      pop: 1
+      set: puzzle-directive-nopipe-body
     - match: '(:)(when)\b'
       captures:
         1: punctuation.definition.keyword.puzzle

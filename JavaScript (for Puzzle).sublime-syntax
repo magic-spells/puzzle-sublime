@@ -31,11 +31,13 @@ contexts:
   #
   #   puzzle-expressions         a value position — text and attribute
   #                              interpolation, brace-only attribute values,
-  #                              component props, marker arguments, and the
-  #                              {#if}/{:else if}/{#unless}/{#case} headers.
-  #                              A top-level `|` is a formatter pipe (D173 V1).
-  #   puzzle-nopipe-expressions  the {#for} header and {:when} values. A
-  #                              top-level `|` there is a compile error.
+  #                              component props and marker arguments. A
+  #                              top-level `|` is a formatter pipe (D173 V1).
+  #   puzzle-nopipe-expressions  every block header: {#if}, {:else if},
+  #                              {#unless} and {#case} conditions (inline
+  #                              attribute {#if} included), the {#for} header
+  #                              and {:when} values. A top-level `|` there is
+  #                              a compile error; `||` is still logical OR.
   #   expressions (native)       @event handler bodies: plain JavaScript, so
   #                              `|` is bitwise OR.
   #

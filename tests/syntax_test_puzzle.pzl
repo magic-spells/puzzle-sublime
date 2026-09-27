@@ -526,8 +526,8 @@
 
     ## --- Formatter chains in every value position (D173 V1) --- a top-level
     ## single `|` is a pipe in text and quoted-attribute interpolation, brace-only
-    ## attribute values, component props, marker arguments, and the {#if},
-    ## {:else if}, {#unless} and {#case} headers
+    ## attribute values, component props and marker arguments (never in a block
+    ## header: see the compile-error section below)
 
     <p title={ price | currency } class={ theme | downcase } key={ row.id | json }>x</p>
   ##         ^ punctuation.section.embedded.begin.puzzle
@@ -563,32 +563,16 @@
   ##                             ^ keyword.operator.formatter.puzzle
   ##                               ^^^^^^^^^ variable.function.formatter.puzzle
 
-    {#if post.tags | size}<b>tagged</b>{:else if a | size}<i>a</i>{/if}
-  ##  ^^ keyword.control.conditional.puzzle
-  ##               ^ keyword.operator.formatter.puzzle
-  ##                 ^^^^ variable.function.formatter.puzzle
-  ##                                          ^^ keyword.control.conditional.if.puzzle
-  ##                                               ^ keyword.operator.formatter.puzzle
-  ##                                                 ^^^^ variable.function.formatter.puzzle
-    {#unless x | blank-ish}<b>shown</b>{/unless}
-  ##  ^^^^^^ keyword.control.conditional.puzzle
-  ##           ^ keyword.operator.formatter.puzzle
-  ##             ^^^^^^^^^ variable.function.formatter.puzzle
-    {#case status | downcase}{:when 'on'}<b>on</b>{/case}
-  ##  ^^^^ keyword.control.conditional.puzzle
-  ##              ^ keyword.operator.formatter.puzzle
-  ##                ^^^^^^^^ variable.function.formatter.puzzle
-  ##                                ^^^^ string.quoted.single.js
+    <p>{ x | blank-ish }</p>
+  ##       ^ keyword.operator.formatter.puzzle
+  ##         ^^^^^^^^^ variable.function.formatter.puzzle
 
-    ## the inline {#if} inside a quoted attribute value takes a chain too
+    ## a quoted attribute value's interpolation takes a chain
 
-    <button class="btn {#if tags | size}has-tags{/if}">x</button>
+    <button class="btn { tags | size }">x</button>
   ##                   ^ punctuation.section.embedded.begin.puzzle
-  ##                     ^^ keyword.control.conditional.puzzle
-  ##                             ^ keyword.operator.formatter.puzzle
-  ##                               ^^^^ variable.function.formatter.puzzle
-  ##                                    ^^^^^^^^ - source.js.embedded.puzzle
-  ##                                              ^^ keyword.control.end.puzzle
+  ##                          ^ keyword.operator.formatter.puzzle
+  ##                            ^^^^ variable.function.formatter.puzzle
 
     ## `||` stays logical OR -- in text and in a brace-only value alike
 
@@ -685,6 +669,76 @@
   ##                  ^^ keyword.operator.logical.js
   ##                  ^^ - invalid.illegal.formatter.puzzle
 
+    ## --- Pipes are compile errors in condition headers too (D173 V1) --- the
+    ## {#if}, {:else if}, {#unless} and {#case} headers take no formatter chain;
+    ## compute the value in data() and test that field instead
+
+    {#if post.tags | size}<b>tagged</b>{:else if a | size}<i>a</i>{/if}
+  ##  ^^ keyword.control.conditional.puzzle
+  ##               ^ invalid.illegal.formatter.puzzle
+  ##               ^ - keyword.operator.formatter.puzzle
+  ##                 ^^^^ - variable.function.formatter.puzzle
+  ##                     ^ punctuation.section.embedded.end.puzzle
+  ##                         ^^^^^^ - source.js.embedded.puzzle
+  ##                                          ^^ keyword.control.conditional.if.puzzle
+  ##                                               ^ invalid.illegal.formatter.puzzle
+  ##                                                 ^^^^ - variable.function.formatter.puzzle
+  ##                                                     ^ punctuation.section.embedded.end.puzzle
+  ##                                                                ^^ keyword.control.end.puzzle
+
+    {#unless x | blank-ish}<b>shown</b>{/unless}
+  ##  ^^^^^^ keyword.control.conditional.puzzle
+  ##           ^ invalid.illegal.formatter.puzzle
+  ##             ^^^^^ - variable.function.formatter.puzzle
+  ##                      ^ punctuation.section.embedded.end.puzzle
+  ##                          ^^^^^ - source.js.embedded.puzzle
+
+    {#case status | downcase}{:when 'on'}<b>on</b>{/case}
+  ##  ^^^^ keyword.control.conditional.puzzle
+  ##              ^ invalid.illegal.formatter.puzzle
+  ##                ^^^^^^^^ - variable.function.formatter.puzzle
+  ##                        ^ punctuation.section.embedded.end.puzzle
+  ##                                ^^^^ string.quoted.single.js
+
+    ## the inline {#if} inside a quoted attribute value is a condition too
+
+    <button class="btn {#if tags | size}has-tags{/if}">x</button>
+  ##                   ^ punctuation.section.embedded.begin.puzzle
+  ##                     ^^ keyword.control.conditional.puzzle
+  ##                             ^ invalid.illegal.formatter.puzzle
+  ##                               ^^^^ - variable.function.formatter.puzzle
+  ##                                    ^^^^^^^^ - source.js.embedded.puzzle
+  ##                                              ^^ keyword.control.end.puzzle
+
+    <p title="{#if on | yes}a{/if}" data-x="{#if a || b}y{/if}">x</p>
+  ##                  ^ invalid.illegal.formatter.puzzle
+  ##                                               ^^ keyword.operator.logical.js
+  ##                                               ^^ - invalid.illegal.formatter.puzzle
+
+    ## the ban is on the pipe, not on OR or bitwise OR in a group: `||` and
+    ## `(flags | mask)` are plain JavaScript in every condition header
+
+    {#if a || b}<b>a</b>{:else if (flags | mask)}<b>m</b>{/if}
+  ##       ^^ keyword.operator.logical.js
+  ##       ^^ - invalid.illegal.formatter.puzzle
+  ##                                     ^ keyword.operator.bitwise.js
+  ##                                     ^ - invalid.illegal.formatter.puzzle
+
+    {#unless a || b}<b>u</b>{/unless}{#case (x | y) || z}{:else}<b>c</b>{/case}
+  ##           ^^ keyword.operator.logical.js
+  ##           ^^ - invalid.illegal.formatter.puzzle
+  ##                                           ^ keyword.operator.bitwise.js
+  ##                                           ^ - invalid.illegal.formatter.puzzle
+  ##                                                ^^ keyword.operator.logical.js
+  ##                                                ^^ - invalid.illegal.formatter.puzzle
+
+    ## a ternary's branches are still top-level, so a pipe after one is the error
+
+    {#if on ? a : b | f}<b>t</b>{/if}
+  ##        ^ keyword.operator.ternary.js
+  ##                ^ invalid.illegal.formatter.puzzle
+  ##                  ^ - variable.function.formatter.puzzle
+
     ## --- What follows a pipe must be a formatter name (D173 V1) --- `| 0`,
     ## `|= 2`, `| f g` and `| f.g` are compile errors, in text and attributes alike
 
@@ -713,8 +767,9 @@
   ##                            ^^ keyword.operator.logical.js
   ##                            ^^ - invalid.illegal.formatter.puzzle
 
-    ## in a {#for} header or a {:when} value every pipe is the error, so the
-    ## name after it is plain JavaScript, not a formatter
+    ## in a block header -- {#for}, {:when}, and the condition headers above --
+    ## every pipe is the error, so the name after it is plain JavaScript, not a
+    ## formatter
 
     {#for item in items | sort}<i>{ item }</i>{/for}{#case s}{:when 'a' | x}<b>a</b>{/case}
   ##                    ^ invalid.illegal.formatter.puzzle
