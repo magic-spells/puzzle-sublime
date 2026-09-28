@@ -76,7 +76,7 @@ contexts:
   strings-common-content:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
   # A capitalized tag is always a Puzzle marker or component, even when its
   # name is also an HTML element. HTML matches its own tag lists
@@ -114,12 +114,12 @@ contexts:
   tag-generic-attribute-name:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
   tag-attribute-value-content:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
 ###[ PUZZLE SECTIONS ]#########################################################
 
@@ -369,7 +369,25 @@ contexts:
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 
+  # Two entry points share every rule but the last. puzzle-embedded serves
+  # text positions (template text, CDATA); puzzle-embedded-attribute serves
+  # attribute names and values, quoted and brace-only alike — which covers
+  # component props, marker arguments, key= and flip= — and the style="…" CSS.
+  # They differ only in the interpolation they open: the markup formatters
+  # `raw` and `newline_to_br` are legal in a text interpolation alone (D174).
   puzzle-embedded:
+    - include: puzzle-embedded-common
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      push: puzzle-interpolation-body
+
+  puzzle-embedded-attribute:
+    - include: puzzle-embedded-common
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      push: puzzle-attribute-interpolation-body
+
+  puzzle-embedded-common:
     # `\{` and `\}` produce a literal brace and open nothing. Matched first so
     # the escape wins over {##, {#comment, {#raw and the bare `{` below.
     #
@@ -382,7 +400,7 @@ contexts:
     #
     # The two positions where it is NOT live never reach here. A brace-only
     # value (`data-x={ … }`) is a JS expression: buildAttr makes it a
-    # DynamicAttr and the grammar hands it to puzzle-interpolation-body, which
+    # DynamicAttr and the grammar hands it to an interpolation body, which
     # does not include this context. A {#raw} body and its attributes are
     # verbatim bytes (lexRawText does no backslash handling; buildAttr
     # short-circuits every Raw token to a literal StaticAttr), and the
@@ -418,9 +436,6 @@ contexts:
       push:
         - puzzle-directive-body
         - puzzle-directive-begin
-    - match: '\{'
-      scope: punctuation.section.embedded.begin.puzzle
-      push: puzzle-interpolation-body
 
   puzzle-directive-begin:
     - meta_include_prototype: false
@@ -514,6 +529,15 @@ contexts:
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
     - include: scope:source.js.embedded.puzzle#puzzle-expressions
+
+  puzzle-attribute-interpolation-body:
+    - clear_scopes: 1
+    - meta_scope: meta.interpolation.puzzle
+    - meta_content_scope: source.js.embedded.puzzle
+    - match: '\}'
+      scope: punctuation.section.embedded.end.puzzle
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#puzzle-attribute-expressions
 
 ###[ RAW BLOCK ]##############################################################
 

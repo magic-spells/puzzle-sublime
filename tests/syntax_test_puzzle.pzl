@@ -840,6 +840,85 @@
   ##                                                                                     ^ variable.function.formatter.puzzle
 
 
+    ## --- Markup formatters (D174) --- `raw` and `newline_to_br` are legal only
+    ## as the last formatter of a text interpolation, with no arguments
+
+    <p>{ html | raw }{ x | trim | raw }{ note | newline_to_br }</p>
+  ##            ^^^ variable.function.formatter.puzzle
+  ##            ^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                       ^^^^ variable.function.formatter.puzzle
+  ##                              ^^^ variable.function.formatter.puzzle
+  ##                              ^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                            ^^^^^^^^^^^^^ variable.function.formatter.puzzle
+  ##                                            ^^^^^^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+
+    ## followed by another formatter, or given arguments, the name is the error
+
+    <p>{ html | raw | trim }{ note | newline_to_br('x') }{ a | raw() }</p>
+  ##            ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                ^ keyword.operator.formatter.puzzle
+  ##                  ^^^^ variable.function.formatter.puzzle
+  ##                                 ^^^^^^^^^^^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                               ^^^ string.quoted.single.js
+  ##                                                           ^^^ invalid.illegal.markup-formatter.puzzle
+
+    ## in an attribute value, prop, marker argument, key= or flip= a markup
+    ## formatter is always the error, quoted or brace-only
+
+    <p title={ html | raw } class="a { note | newline_to_br }" key={ k | raw } flip={ f | raw }>x</p>
+  ##                ^ keyword.operator.formatter.puzzle
+  ##                  ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                          ^^^^^^^^^^^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                                     ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                                                      ^^^ invalid.illegal.markup-formatter.puzzle
+    <Card body={ html | raw }/><Slot name="row" html={ h | newline_to_br }/>
+  ##                    ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                       ^^^^^^^^^^^^^ invalid.illegal.markup-formatter.puzzle
+    <p style="color: { c | raw }" data-x="{#if on}{ h | raw }{/if}">x</p>
+  ##                       ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                    ^^^ invalid.illegal.markup-formatter.puzzle
+
+    ## longer names are other formatters, and `||` is never a pipe
+
+    <p>{ x | raw_text }{ x | rawValue }{ x | raw-ish | raw }{ a || raw }</p>
+  ##         ^^^^^^^^ variable.function.formatter.puzzle
+  ##         ^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                         ^^^^^^^^ variable.function.formatter.puzzle
+  ##                         ^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                         ^^^^^^^ variable.function.formatter.puzzle
+  ##                                         ^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                                   ^^^ variable.function.formatter.puzzle
+  ##                                                            ^^ keyword.operator.logical.js
+  ##                                                               ^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                                               ^^^ - variable.function.formatter.puzzle
+    <p title={ x | raw_text } class={ x | newline_to_br_ish }>x</p>
+  ##               ^^^^^^^^ variable.function.formatter.puzzle
+  ##               ^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                      ^^^^^^^^^^^^^^^^^ variable.function.formatter.puzzle
+  ##                                      ^^^^^^^^^^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+
+    ## --- Formatter names are strict (D173 V1) --- an identifier, optionally
+    ## kebab-case where every `-` starts a word with a letter; anything else
+    ## after a pipe marks the pipe as the error
+
+    { x | bit-1 } { x | a--b } { x | a- } { x | fmt.eur } { x | 0 } { x | kebab-case-name }
+  ##    ^ invalid.illegal.formatter.puzzle
+  ##      ^^^^^ - variable.function.formatter.puzzle
+  ##                  ^ invalid.illegal.formatter.puzzle
+  ##                               ^ invalid.illegal.formatter.puzzle
+  ##                                          ^ invalid.illegal.formatter.puzzle
+  ##                                            ^^^ - variable.function.formatter.puzzle
+  ##                                                          ^ invalid.illegal.formatter.puzzle
+  ##                                                                    ^ keyword.operator.formatter.puzzle
+  ##                                                                    ^ - invalid.illegal.formatter.puzzle
+  ##                                                                      ^^^^^^^^^^^^^^^ variable.function.formatter.puzzle
+    <p title={ x | bit-1 } data-x="{ x | fmt.eur }" data-y={ x | a-b2 }>x</p>
+  ##             ^ invalid.illegal.formatter.puzzle
+  ##                                   ^ invalid.illegal.formatter.puzzle
+  ##                                                           ^ keyword.operator.formatter.puzzle
+  ##                                                             ^^^^ variable.function.formatter.puzzle
+
+
     ## --- <pre> keeps its whitespace (D168) --- nothing collapses; interpolation
     ## reads the same inside it
 

@@ -10,8 +10,8 @@ extends: Packages/CSS/CSS.sublime-syntax
 contexts:
   rule-list-body:
     - meta_prepend: true
-    - include: scope:text.html.puzzle#puzzle-embedded
+    - include: scope:text.html.puzzle#puzzle-embedded-attribute
 
   property-value-content:
     - meta_prepend: true
-    - include: scope:text.html.puzzle#puzzle-embedded
+    - include: scope:text.html.puzzle#puzzle-embedded-attribute

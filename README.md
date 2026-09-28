@@ -16,7 +16,14 @@ New in 0.8.0:
   formatter's arguments (`{ (a | b) }`, `{ x | f(a | b) }`) is a compile error
   and is flagged as one, as is a single `|` in an `@event` handler body; `||`
   stays logical OR everywhere, and `|=` stays assignment in a handler
-- Formatter names may contain `-` after the first character (`blank-ish`)
+- Formatter names are strict: an identifier, optionally kebab-case where every
+  `-` starts a word with a letter (`blank-ish`). A pipe followed by anything
+  else (`| bit-1`, `| fmt.eur`, `| 0`) is flagged
+- The markup formatters `raw` and `newline_to_br` are legal only as the last
+  formatter of a text interpolation, with no arguments (`{ html | raw }`,
+  `{ x | trim | raw }`). Followed by another formatter, given arguments, or used
+  in an attribute value, prop, marker argument, `key=` or `flip=`, the name is
+  flagged as a compile error
 - Block headers take no formatter chain: a pipe in an `{#if}`, `{:else if}`,
   `{#unless}` or `{#case}` condition (including an inline `{#if}` in a quoted
   attribute value), a `{#for}` header or a `{:when}` value is a compile error
@@ -147,6 +154,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
+| `raw` / `newline_to_br` anywhere but the end of a text interpolation's chain, or with arguments | `invalid.illegal.markup-formatter.puzzle` |
 | Pipe in a block header (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`), nested inside brackets, in an `@event` handler, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
 
 ## Tests
@@ -155,11 +163,12 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-507 assertions covering the HTML template grammar, every shipped Puzzle
+557 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains in every value position (and the positions where a
-pipe is an error), data-language expressions, event modifiers, composition
-markers and their arguments, brace escapes, raw blocks, and the JavaScript,
-TypeScript and CSS section boundaries.
+pipe is an error), strict formatter names, markup-formatter placement,
+data-language expressions, event modifiers, composition markers and their
+arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
+section boundaries.
 
 The runner is Sublime's own — there is no external CLI — but it can be driven
 without touching the UI, provided this repository is symlinked into `Packages/`
@@ -189,10 +198,14 @@ is highlighted with JavaScript's own scopes, so `.length`, a call on a value
 (`draft.trim()`), an arrow function, a template literal, `new`, `typeof`,
 `++`, assignment or a bitwise operator other than `|` reads as JavaScript
 rather than as an error; the compiler reports each with a positioned message.
-Likewise which formatter names exist, and where `raw` and `newline_to_br` may
-appear, are compile-time checks: every name after a pipe gets the formatter
-scope. Of the expression rules, only the pipe rules are flagged, because a `|`
-changes how the rest of the value parses.
+Likewise which formatter names exist is a compile-time check: every
+well-formed name after a pipe gets the formatter scope. Of the expression
+rules, only the pipe and formatter-placement rules are flagged. One
+markup-formatter rule is left to the compiler as well: `raw` or
+`newline_to_br` inside a text-only element (`<textarea>`, `<title>`,
+`<script>`, …) or inside `<svg>`/`<math>` is an error the grammar does not
+track, and a text interpolation whose chain continues onto the next line
+after `raw` is not flagged, since the grammar reads one line at a time.
 
 Formatter pipes follow the compiler's top-level rule by grammar structure, not
 by counting brackets. A pipe after a ternary's last branch

@@ -11,9 +11,16 @@ hidden: true
 extends: Packages/JavaScript/JavaScript.sublime-syntax
 
 variables:
-  # isFormatterName in the compiler: `[A-Za-z_$]` then `[A-Za-z0-9_$-]*`. ASCII
-  # only, and `-` is legal after the first character (`blank-ish`).
-  puzzle_formatter_name: '[A-Za-z_$][A-Za-z0-9_$-]*'
+  # isFormatterName in the compiler: an ASCII identifier, optionally
+  # kebab-case, where every `-` starts a word with a letter (`blank-ish`).
+  # `bit-1`, `a--b` and `a-` are not names, and neither is anything dotted.
+  puzzle_formatter_name: '[A-Za-z_$][A-Za-z0-9_$]*(?:-[A-Za-z][A-Za-z0-9_$]*)*'
+  # The end of a formatter name: a longer name (`raw_text`, `rawValue`,
+  # `raw-ish`) is a different formatter, not a markup one.
+  puzzle_formatter_name_break: '(?![A-Za-z0-9_$]|-[A-Za-z])'
+  # The markup formatters (D174): legal only as the last link of a text
+  # interpolation's chain, bare, with no arguments.
+  puzzle_markup_formatter: '(?:raw|newline_to_br){{puzzle_formatter_name_break}}'
   # A formatter pipe is a single `|`: `||` stays logical OR, `|=` and `||=`
   # stay assignment. No lookbehind is needed (and Sublime's sregex engine does
   # not support one): binary-operators consumes `||` whole, so its second
@@ -29,10 +36,16 @@ contexts:
   # Entry points. The Puzzle grammar includes exactly one of these per brace
   # position, and never JavaScript's own `expressions`:
   #
-  #   puzzle-expressions         a value position — text and attribute
-  #                              interpolation, brace-only attribute values,
-  #                              component props and marker arguments. A
-  #                              top-level `|` is a formatter pipe (D173 V1).
+  #   puzzle-expressions         a text interpolation. A top-level `|` is a
+  #                              formatter pipe (D173 V1), and the chain may
+  #                              end in a markup formatter (`raw`,
+  #                              `newline_to_br`).
+  #   puzzle-attribute-expressions
+  #                              every other value position — quoted and
+  #                              brace-only attribute values, component
+  #                              props, marker arguments, key= and flip=. A
+  #                              top-level `|` is a formatter pipe, but a
+  #                              markup formatter is a compile error there.
   #   puzzle-nopipe-expressions  every block header: {#if}, {:else if},
   #                              {#unless} and {#case} conditions (inline
   #                              attribute {#if} included), the {#for} header
@@ -56,6 +69,10 @@ contexts:
     - match: '(?=\S)'
       push: [puzzle-expression-end, expression-begin]
 
+  puzzle-attribute-expressions:
+    - match: '(?=\S)'
+      push: [puzzle-attribute-expression-end, expression-begin]
+
   puzzle-nopipe-expressions:
     - match: '(?=\S)'
       push: [puzzle-nopipe-expression-end, expression-begin]
@@ -73,6 +90,19 @@ contexts:
     - include: postfix-operators
     - include: binary-operators
     - include: puzzle-ternary-operator
+    - include: left-expression-end
+
+  # The same frame for an attribute-side value; only the formatter-name context
+  # it pushes differs, and its ternary restores this frame after the `:`.
+  puzzle-attribute-expression-end:
+    - include: puzzle-invalid-pipe
+    - match: '{{puzzle_pipe}}'
+      scope: keyword.operator.formatter.puzzle
+      push: puzzle-attribute-formatter-name
+    - include: puzzle-range-operator
+    - include: postfix-operators
+    - include: binary-operators
+    - include: puzzle-attribute-ternary-operator
     - include: left-expression-end
 
   puzzle-nopipe-expression-end:
@@ -110,6 +140,19 @@ contexts:
     - match: ':'
       scope: keyword.operator.ternary.js
       set: [puzzle-expression-end, expression-begin]
+    - include: else-pop
+
+  puzzle-attribute-ternary-operator:
+    - match: '\?(?=[^.]|\.[0-9])'
+      scope: keyword.operator.ternary.js
+      set:
+        - puzzle-attribute-ternary-operator-expect-colon
+        - expression-no-comma
+
+  puzzle-attribute-ternary-operator-expect-colon:
+    - match: ':'
+      scope: keyword.operator.ternary.js
+      set: [puzzle-attribute-expression-end, expression-begin]
     - include: else-pop
 
   puzzle-nopipe-ternary-operator:
@@ -159,8 +202,36 @@ contexts:
   # The name after a pipe, bare or called: `| trim`, `| currency('$', 2)`. The
   # argument list is matched afterwards by the frame underneath, as an ordinary
   # call, so object-literal arguments (`| t({ name })`) are native JavaScript.
+  #
+  # In a text interpolation, `raw` and `newline_to_br` are ordinary names when
+  # they end the chain: nothing but the closing `}` may follow (or the end of
+  # the line, where the chain may continue below and the grammar cannot see
+  # it). Followed by another formatter or by arguments, the name is the
+  # compile error — markup is no formatter's input, and neither takes
+  # arguments.
   puzzle-formatter-name:
     - meta_include_prototype: false
+    - match: '\s*({{puzzle_markup_formatter}})(?=\s*(?:\}|$))'
+      captures:
+        1: variable.function.formatter.puzzle
+      pop: 1
+    - match: '\s*({{puzzle_markup_formatter}})'
+      captures:
+        1: invalid.illegal.markup-formatter.puzzle
+      pop: 1
+    - include: puzzle-formatter-name-common
+
+  # In every other value position a markup formatter is always the error: its
+  # output is markup, which only a text position can render.
+  puzzle-attribute-formatter-name:
+    - meta_include_prototype: false
+    - match: '\s*({{puzzle_markup_formatter}})'
+      captures:
+        1: invalid.illegal.markup-formatter.puzzle
+      pop: 1
+    - include: puzzle-formatter-name-common
+
+  puzzle-formatter-name-common:
     - match: '\s*({{puzzle_formatter_name}})'
       captures:
         1: variable.function.formatter.puzzle
