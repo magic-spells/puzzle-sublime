@@ -206,12 +206,14 @@ contexts:
   # In a text interpolation, `raw` and `newline_to_br` are ordinary names when
   # they end the chain: nothing but the closing `}` may follow (or the end of
   # the line, where the chain may continue below and the grammar cannot see
-  # it). Followed by another formatter or by arguments, the name is the
+  # it). An empty call — `raw()`, `raw( )` — is the same bare name to the
+  # compiler (parseFormatter records no arguments), so it is legal too.
+  # Followed by another formatter or by real arguments, the name is the
   # compile error — markup is no formatter's input, and neither takes
   # arguments.
   puzzle-formatter-name:
     - meta_include_prototype: false
-    - match: '\s*({{puzzle_markup_formatter}})(?=\s*(?:\}|$))'
+    - match: '\s*({{puzzle_markup_formatter}})(?=\s*(?:\(\s*\)\s*)?(?:\}|$))'
       captures:
         1: variable.function.formatter.puzzle
       pop: 1

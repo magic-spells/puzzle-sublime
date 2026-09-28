@@ -854,13 +854,28 @@
 
     ## followed by another formatter, or given arguments, the name is the error
 
-    <p>{ html | raw | trim }{ note | newline_to_br('x') }{ a | raw() }</p>
+    <p>{ html | raw | trim }{ note | newline_to_br('x') }{ a | raw(1) }{ b | raw() | trim }</p>
   ##            ^^^ invalid.illegal.markup-formatter.puzzle
   ##                ^ keyword.operator.formatter.puzzle
   ##                  ^^^^ variable.function.formatter.puzzle
   ##                                 ^^^^^^^^^^^^^ invalid.illegal.markup-formatter.puzzle
   ##                                               ^^^ string.quoted.single.js
   ##                                                           ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                                         ^^^ invalid.illegal.markup-formatter.puzzle
+
+    ## empty parentheses are no arguments: `raw()` still ends the chain bare
+
+    <p>{ a | raw() }{ b | newline_to_br( ) }{ c | trim | raw() }</p>
+  ##         ^^^ variable.function.formatter.puzzle
+  ##         ^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                      ^^^^^^^^^^^^^ variable.function.formatter.puzzle
+  ##                      ^^^^^^^^^^^^^ - invalid.illegal.markup-formatter.puzzle
+  ##                                                     ^^^ variable.function.formatter.puzzle
+  ##                                                     ^^^ - invalid.illegal.markup-formatter.puzzle
+    <p title={ a | raw() } class="x { b | newline_to_br() }">x</p><Card body={ c | raw() }/>
+  ##               ^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                      ^^^^^^^^^^^^^ invalid.illegal.markup-formatter.puzzle
+  ##                                                                               ^^^ invalid.illegal.markup-formatter.puzzle
 
     ## in an attribute value, prop, marker argument, key= or flip= a markup
     ## formatter is always the error, quoted or brace-only

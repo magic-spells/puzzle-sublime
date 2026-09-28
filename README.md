@@ -21,9 +21,9 @@ New in 0.8.0:
   else (`| bit-1`, `| fmt.eur`, `| 0`) is flagged
 - The markup formatters `raw` and `newline_to_br` are legal only as the last
   formatter of a text interpolation, with no arguments (`{ html | raw }`,
-  `{ x | trim | raw }`). Followed by another formatter, given arguments, or used
-  in an attribute value, prop, marker argument, `key=` or `flip=`, the name is
-  flagged as a compile error
+  `{ x | trim | raw }`; empty parentheses, `raw()`, count as none). Followed by
+  another formatter, given arguments, or used in an attribute value, prop,
+  marker argument, `key=` or `flip=`, the name is flagged as a compile error
 - Block headers take no formatter chain: a pipe in an `{#if}`, `{:else if}`,
   `{#unless}` or `{#case}` condition (including an inline `{#if}` in a quoted
   attribute value), a `{#for}` header or a `{:when}` value is a compile error
@@ -163,7 +163,7 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-557 assertions covering the HTML template grammar, every shipped Puzzle
+567 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains in every value position (and the positions where a
 pipe is an error), strict formatter names, markup-formatter placement,
 data-language expressions, event modifiers, composition markers and their
