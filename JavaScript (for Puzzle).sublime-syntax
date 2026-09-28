@@ -38,17 +38,20 @@ contexts:
   #                              attribute {#if} included), the {#for} header
   #                              and {:when} values. A top-level `|` there is
   #                              a compile error; `||` is still logical OR.
-  #   expressions (native)       @event handler bodies: plain JavaScript, so
-  #                              `|` is bitwise OR.
+  #   expressions (native)       @event handler bodies: JavaScript, except
+  #                              that a single `|` is a compile error there
+  #                              too (see binary-operators below).
   #
   # "Top-level" is the compiler's rule (splitTopLevel): a `|` inside a string,
   # regex, parentheses, brackets or braces is not a split point. Only the
-  # outermost expression-end frame below knows about pipes; every nested frame
-  # — a group, call arguments, an array, an object literal, a subscript — is
-  # pushed by native JavaScript rules with the native expression-end, where
-  # `|` is bitwise OR. That is also why `{ t({ name: user.name }) }` needs no
-  # special handling: the inner braces are JavaScript's own object literal and
-  # balance there, so the interpolation still closes on the outer `}`.
+  # outermost expression-end frame below knows about formatter pipes; every
+  # nested frame — a group, call or formatter arguments, an array, an object
+  # literal, a subscript — is pushed by native JavaScript rules with the native
+  # expression-end, whose binary-operators flag a single `|` as the nested-pipe
+  # error (D176: there is no bitwise OR in templates). That is also why
+  # `{ t({ name: user.name }) }` needs no special handling: the inner braces are
+  # JavaScript's own object literal and balance there, so the interpolation
+  # still closes on the outer `}`.
   puzzle-expressions:
     - match: '(?=\S)'
       push: [puzzle-expression-end, expression-begin]
@@ -121,6 +124,22 @@ contexts:
       scope: keyword.operator.ternary.js
       set: [puzzle-nopipe-expression-end, expression-begin]
     - include: else-pop
+
+  # A single `|` below the top level of a template value — inside a group, call
+  # or formatter arguments, a subscript, an array or an object literal, or in
+  # a ternary's middle branch — is a compile error (D176 rule 4): there is no
+  # bitwise OR in templates, and a formatter pipe must be at the top level.
+  # An @event handler body rejects a single `|` as well. The top-level frames
+  # above match their own pipes before they reach this context, so this rule
+  # only ever sees the nested ones and the handler's. `||` and `|=` keep their
+  # native meaning: binary-operators consumes them before this pattern is
+  # tried at their second character, and the lookahead skips their first.
+  # Nothing here reaches a <script> section, which embeds native JavaScript.
+  binary-operators:
+    - meta_prepend: true
+    - match: '{{puzzle_pipe}}'
+      scope: invalid.illegal.formatter.puzzle
+      push: expression-begin
 
   # Puzzle's inclusive range form: {#for 1...5, n}
   puzzle-range-operator:

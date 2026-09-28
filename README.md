@@ -8,16 +8,20 @@ New in 0.8.0:
 - Formatter chains in every value position (D173) — brace-only attribute
   values (`title={ price | currency }`), component props and marker arguments,
   alongside text and quoted-attribute interpolation
-- Only a top-level single `|` is a pipe: inside parentheses, call arguments or
-  brackets it is JavaScript's bitwise OR, and an `@event` handler body is plain
-  JavaScript throughout
+- Template values are a data language (D176): paths, literals and operators,
+  with `.size` for a count, `??` for a fallback and `this.` as the door into the
+  view's JavaScript. They are highlighted as JavaScript expressions
+- Only a top-level single `|` is a pipe. There is no bitwise OR in templates, so
+  a single `|` nested inside parentheses, brackets, an object literal or a
+  formatter's arguments (`{ (a | b) }`, `{ x | f(a | b) }`) is a compile error
+  and is flagged as one, as is a single `|` in an `@event` handler body; `||`
+  stays logical OR everywhere, and `|=` stays assignment in a handler
 - Formatter names may contain `-` after the first character (`blank-ish`)
 - Block headers take no formatter chain: a pipe in an `{#if}`, `{:else if}`,
   `{#unless}` or `{#case}` condition (including an inline `{#if}` in a quoted
   attribute value), a `{#for}` header or a `{:when}` value is a compile error
   and is flagged as one. Compute the value in `data()` and test that field
-  (`{#if hasTags}`); `||` stays logical OR there, and `(flags | mask)` stays
-  bitwise OR
+  (`{#if hasTags}`); `||` stays logical OR there
 - A pipe not followed by a formatter name is flagged as a compile error too
   (`{ w / 2 | 0 }`, `{ x |= 2 }`, `{ x | f g }`, `{ x | f.g }`)
 - Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
@@ -47,12 +51,15 @@ the entire file.
 
 Both template sections support:
 
-- JavaScript interpolation: `{ user.name }`
+- Expression interpolation: `{ user.name }`, `{ todos.size }`,
+  `{ subtitle ?? 'Untitled' }`, `{ this.ago(createdAt) }`
 - Formatter chains: `{ price | currency('$', 2) | trim }`, in every value
   position — text and attribute interpolation, brace-only attribute values
   (`title={ price | currency }`), component props and marker arguments. Block
   headers (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`)
-  take none: a pipe there is flagged as an error
+  take none: a pipe there is flagged as an error, as is a pipe nested inside
+  brackets
+- Object-literal formatter arguments: `{ 'cart.count' | t({ count: n }) }`
 - Conditionals: `{#if}`, `{:else if}`, `{:else}`, `{/if}`
 - Inverted conditionals: `{#unless}` and `{/unless}`
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
@@ -140,7 +147,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
-| Pipe in a block header (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`), or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
+| Pipe in a block header (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`), nested inside brackets, in an `@event` handler, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
 
 ## Tests
 
@@ -148,11 +155,11 @@ Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-471 assertions covering the HTML template grammar, every shipped Puzzle
+507 assertions covering the HTML template grammar, every shipped Puzzle
 directive, formatter chains in every value position (and the positions where a
-pipe is JavaScript or an error), event modifiers, composition markers and their
-arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
-section boundaries.
+pipe is an error), data-language expressions, event modifiers, composition
+markers and their arguments, brace escapes, raw blocks, and the JavaScript,
+TypeScript and CSS section boundaries.
 
 The runner is Sublime's own — there is no external CLI — but it can be driven
 without touching the UI, provided this repository is symlinked into `Packages/`
@@ -177,8 +184,20 @@ inside the template embeds JavaScript, and a `{#raw}` block written inside it is
 highlighted as JavaScript rather than as a raw body. Raw blocks in ordinary
 template text are unaffected.
 
+The data-language rules (D176) are the compiler's to enforce. A template value
+is highlighted with JavaScript's own scopes, so `.length`, a call on a value
+(`draft.trim()`), an arrow function, a template literal, `new`, `typeof`,
+`++`, assignment or a bitwise operator other than `|` reads as JavaScript
+rather than as an error; the compiler reports each with a positioned message.
+Likewise which formatter names exist, and where `raw` and `newline_to_br` may
+appear, are compile-time checks: every name after a pipe gets the formatter
+scope. Of the expression rules, only the pipe rules are flagged, because a `|`
+changes how the rest of the value parses.
+
 Formatter pipes follow the compiler's top-level rule by grammar structure, not
-by counting brackets, so one edge differs: a `|` in the middle branch of a
-ternary (`{ a ? b | x : c }`) reads as bitwise OR, where the compiler splits
-there and rejects `x : c` as a formatter name. A pipe after the ternary's last
-branch (`{ on ? a : b | upcase }`) is a formatter, as it should be.
+by counting brackets. A pipe after a ternary's last branch
+(`{ on ? a : b | upcase }`) is a formatter; one in the middle branch
+(`{ a ? b | x : c }`) is flagged, since the compiler splits there and rejects
+`x : c` as a formatter name. One edge differs: inside an `@event` handler, a
+`|` in a template literal's `${…}` substitution is flagged, where the compiler
+treats the whole template literal as text.

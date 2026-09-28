@@ -339,7 +339,9 @@ contexts:
 
   # An @event value is a handler body, not a template value position: the
   # compiler takes it verbatim as JavaScript and never runs the formatter
-  # chain over it, so `@click={ a | b }` is a bitwise OR. The brace-only form
+  # chain over it. It is still written in a template, though, so a single `|`
+  # there is a compile error rather than a bitwise OR (D176), and the embedded
+  # grammar flags it; `||` and `|=` stay JavaScript. The brace-only form
   # is the only legal spelling (`={ ... }`); anything else falls back to the
   # generic HTML value so an erroneous quoted value still reads as a string.
   puzzle-event-attribute-assignment:
@@ -427,7 +429,8 @@ contexts:
     # {:when} value is a compile error — formatters belong in value positions,
     # not in logic. Each of these headers gets the no-pipe body, which sits on
     # top of puzzle-directive-body until the closing `}`. `||` stays logical
-    # OR, and a `|` inside parentheses, brackets or strings is plain JavaScript.
+    # OR, a `|` inside a string is text, and a `|` inside parentheses or
+    # brackets is the nested-pipe error, as in every value position (D176).
     # This covers the inline {#if} in a quoted attribute value too, which
     # reaches this context through puzzle-embedded like any other directive.
     - match: '(#)(if|unless|case)\b'

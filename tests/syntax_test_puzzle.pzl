@@ -196,14 +196,14 @@
     ##                                                   ^^^^ entity.name.tag.marker.puzzle
     <Children>
    ##^^^^^^^^ entity.name.tag.marker.puzzle
-      {#if items.length}<ItemCard item={ items[0] } />{:else}<p>plain</p>{/if}
+      {#if items.size}<ItemCard item={ items[0] } />{:else}<p>plain</p>{/if}
       ##^^ keyword.control.conditional.puzzle
-      ##   ^^^^^^^^^^^^ source.js.embedded.puzzle
-      ##                 ^^^^^^^^ entity.name.tag.component.puzzle
-      ##                                 ^^^^^^^^ source.js.embedded.puzzle
-      ##                                                ^^^^ keyword.control.conditional.else.puzzle
-      ##                                                        ^^^^^ - source.js.embedded.puzzle
-      ##                                                                   ^^ keyword.control.end.puzzle
+      ##   ^^^^^^^^^^ source.js.embedded.puzzle
+      ##               ^^^^^^^^ entity.name.tag.component.puzzle
+      ##                               ^^^^^^^^ source.js.embedded.puzzle
+      ##                                              ^^^^ keyword.control.conditional.else.puzzle
+      ##                                                      ^^^^^ - source.js.embedded.puzzle
+      ##                                                                 ^^ keyword.control.end.puzzle
     </Children>
     ##^^^^^^^^ entity.name.tag.marker.puzzle
 
@@ -569,10 +569,10 @@
 
     ## a quoted attribute value's interpolation takes a chain
 
-    <button class="btn { tags | size }">x</button>
+    <button class="btn { tone | downcase }">x</button>
   ##                   ^ punctuation.section.embedded.begin.puzzle
   ##                          ^ keyword.operator.formatter.puzzle
-  ##                            ^^^^ variable.function.formatter.puzzle
+  ##                            ^^^^^^^^ variable.function.formatter.puzzle
 
     ## `||` stays logical OR -- in text and in a brace-only value alike
 
@@ -582,32 +582,58 @@
   ##                        ^^ keyword.operator.logical.js
   ##                        ^^ - keyword.operator.formatter.puzzle
 
-    ## a pipe inside a group, call arguments or a subscript is not top-level,
-    ## so it is JavaScript bitwise OR
+    ## a single `|` nested inside a group, call or formatter arguments, a
+    ## subscript or an object literal is not a pipe and not a bitwise OR either:
+    ## templates have no bitwise OR (D176), so it is a compile error
 
-    { (flags | mask) } { pick(a | b) } { list[a | b] }
-  ##         ^ keyword.operator.bitwise.js
-  ##         ^ - keyword.operator.formatter.puzzle
-  ##                            ^ keyword.operator.bitwise.js
-  ##                            ^ - keyword.operator.formatter.puzzle
-  ##                                            ^ keyword.operator.bitwise.js
-  ##                                            ^ - keyword.operator.formatter.puzzle
+    { (flags | mask) } { this.pick(a | b) } { list[a | b] }
+  ##         ^ invalid.illegal.formatter.puzzle
+  ##         ^ - keyword.operator.bitwise.js
+  ##                                 ^ invalid.illegal.formatter.puzzle
+  ##                                                 ^ invalid.illegal.formatter.puzzle
+  ##                                                 ^ - keyword.operator.formatter.puzzle
+    { x | f(a | b) } { 'k' | t({ n: a | b }) } { x | t({ n }) | upcase }
+  ##    ^ keyword.operator.formatter.puzzle
+  ##          ^ invalid.illegal.formatter.puzzle
+  ##                       ^ keyword.operator.formatter.puzzle
+  ##                                  ^ invalid.illegal.formatter.puzzle
+  ##                                               ^ keyword.operator.formatter.puzzle
+  ##                                                          ^ keyword.operator.formatter.puzzle
+  ##                                                          ^ - invalid.illegal.formatter.puzzle
 
-    ## a ternary's branches are top-level too, so the chain resumes after one
+    ## `||` stays logical OR at any depth
 
-    { on ? a : b | upcase }
+    { (a || b) } { this.pick(a || b) }
+  ##     ^^ keyword.operator.logical.js
+  ##     ^^ - invalid.illegal.formatter.puzzle
+  ##                           ^^ keyword.operator.logical.js
+  ##                           ^^ - invalid.illegal.formatter.puzzle
+
+    ## a ternary's branches are top-level too, so the chain resumes after the
+    ## last one; a pipe in the middle branch splits the value there and leaves
+    ## `x : c` as the formatter name, which is the compile error
+
+    { on ? a : b | upcase } { on ? b | x : c }
   ##     ^ keyword.operator.ternary.js
   ##             ^ keyword.operator.formatter.puzzle
   ##               ^^^^^^ variable.function.formatter.puzzle
+  ##                                 ^ invalid.illegal.formatter.puzzle
+  ##                                 ^ - keyword.operator.bitwise.js
 
-    ## an @event value is a handler body, not a value position: plain JavaScript
+    ## an @event value is a handler body, not a value position: JavaScript,
+    ## except that a single `|` is a compile error there too. `||` and `|=` are
+    ## JavaScript, and a `|` inside a string is text
 
-    <button @click={ a | b } @input={ mask |= 1 }>x</button>
+    <button @click={ a | b } @input={ mask |= 1 } @blur={ a || send('x|y') }>x</button>
   ##               ^ punctuation.section.embedded.begin.puzzle
-  ##                   ^ keyword.operator.bitwise.js
-  ##                   ^ - keyword.operator.formatter.puzzle
+  ##                   ^ invalid.illegal.formatter.puzzle
+  ##                   ^ - keyword.operator.bitwise.js
   ##                       ^ punctuation.section.embedded.end.puzzle
   ##                                       ^^ keyword.operator.assignment.augmented.js
+  ##                                       ^^ - invalid.illegal.formatter.puzzle
+  ##                                                        ^^ keyword.operator.logical.js
+  ##                                                                ^^^^^ string.quoted.single.js
+  ##                                                                  ^ - invalid.illegal.formatter.puzzle
 
 
     ## --- Object literals in arguments (D173 V8) --- the inner braces are
@@ -637,15 +663,15 @@
   ##                                        ^ punctuation.definition.tag.end.html
   ##                                         ^^^^ - source.js.embedded.puzzle
 
-    <p>{ fn({ a: 1 }) } tail</p>
-  ##        ^ meta.mapping.js
-  ##                  ^ punctuation.section.embedded.end.puzzle
-  ##                    ^^^^ - source.js.embedded.puzzle
+    <p>{ this.fmt({ a: 1 }) } tail</p>
+  ##              ^ meta.mapping.js
+  ##                        ^ punctuation.section.embedded.end.puzzle
+  ##                          ^^^^ - source.js.embedded.puzzle
 
 
     ## --- Pipes are compile errors in a {#for} header and in {:when} values ---
 
-    {#for item in items | sort}<i>{ item }</i>{/for}
+    {#for item in items | trim}<i>{ item }</i>{/for}
   ##  ^^^ keyword.control.loop.puzzle
   ##           ^^ keyword.operator.js
   ##                    ^ invalid.illegal.formatter.puzzle
@@ -660,8 +686,8 @@
   ##           ^^^^ keyword.control.conditional.puzzle
   ##                    ^ invalid.illegal.formatter.puzzle
   ##                                  ^^^^ keyword.control.conditional.puzzle
-  ##                                             ^ keyword.operator.bitwise.js
-  ##                                             ^ - invalid.illegal.formatter.puzzle
+  ##                                             ^ invalid.illegal.formatter.puzzle
+  ##                                             ^ - keyword.operator.bitwise.js
 
     ## the ban is on the pipe, not on OR: `||` is fine in a loop header
 
@@ -673,7 +699,7 @@
     ## {#if}, {:else if}, {#unless} and {#case} headers take no formatter chain;
     ## compute the value in data() and test that field instead
 
-    {#if post.tags | size}<b>tagged</b>{:else if a | size}<i>a</i>{/if}
+    {#if post.tags | trim}<b>tagged</b>{:else if a | trim}<i>a</i>{/if}
   ##  ^^ keyword.control.conditional.puzzle
   ##               ^ invalid.illegal.formatter.puzzle
   ##               ^ - keyword.operator.formatter.puzzle
@@ -702,7 +728,7 @@
 
     ## the inline {#if} inside a quoted attribute value is a condition too
 
-    <button class="btn {#if tags | size}has-tags{/if}">x</button>
+    <button class="btn {#if tags | trim}has-tags{/if}">x</button>
   ##                   ^ punctuation.section.embedded.begin.puzzle
   ##                     ^^ keyword.control.conditional.puzzle
   ##                             ^ invalid.illegal.formatter.puzzle
@@ -715,20 +741,21 @@
   ##                                               ^^ keyword.operator.logical.js
   ##                                               ^^ - invalid.illegal.formatter.puzzle
 
-    ## the ban is on the pipe, not on OR or bitwise OR in a group: `||` and
-    ## `(flags | mask)` are plain JavaScript in every condition header
+    ## the ban is on the pipe, not on OR: `||` is logical OR in every condition
+    ## header, while a `|` inside a group is the nested-pipe error of every
+    ## value position (D176), never a bitwise OR
 
     {#if a || b}<b>a</b>{:else if (flags | mask)}<b>m</b>{/if}
   ##       ^^ keyword.operator.logical.js
   ##       ^^ - invalid.illegal.formatter.puzzle
-  ##                                     ^ keyword.operator.bitwise.js
-  ##                                     ^ - invalid.illegal.formatter.puzzle
+  ##                                     ^ invalid.illegal.formatter.puzzle
+  ##                                     ^ - keyword.operator.bitwise.js
 
     {#unless a || b}<b>u</b>{/unless}{#case (x | y) || z}{:else}<b>c</b>{/case}
   ##           ^^ keyword.operator.logical.js
   ##           ^^ - invalid.illegal.formatter.puzzle
-  ##                                           ^ keyword.operator.bitwise.js
-  ##                                           ^ - invalid.illegal.formatter.puzzle
+  ##                                           ^ invalid.illegal.formatter.puzzle
+  ##                                           ^ - keyword.operator.bitwise.js
   ##                                                ^^ keyword.operator.logical.js
   ##                                                ^^ - invalid.illegal.formatter.puzzle
 
@@ -771,11 +798,46 @@
     ## every pipe is the error, so the name after it is plain JavaScript, not a
     ## formatter
 
-    {#for item in items | sort}<i>{ item }</i>{/for}{#case s}{:when 'a' | x}<b>a</b>{/case}
+    {#for item in items | trim}<i>{ item }</i>{/for}{#case s}{:when 'a' | x}<b>a</b>{/case}
   ##                    ^ invalid.illegal.formatter.puzzle
   ##                      ^^^^ - variable.function.formatter.puzzle
   ##                                                                    ^ invalid.illegal.formatter.puzzle
   ##                                                                      ^ - variable.function.formatter.puzzle
+
+
+    ## --- The data language (D176) --- a template value is data read with paths
+    ## and combined with operators: `.size` counts, `??` falls back, and `this.`
+    ## reaches the view's JavaScript. They read as ordinary expressions
+
+    {#if todos.size > 0}{ title.size } { this.ago(createdAt) }{/if}
+  ##     ^^^^^^^^^^ source.js.embedded.puzzle
+  ##                ^ keyword.operator.comparison.js
+  ##                      ^^^^^^^^^^ source.js.embedded.puzzle
+  ##                                     ^^^^ variable.language.this.js
+  ##                                     ^^^^^^^^ - invalid.illegal.formatter.puzzle
+    <h2 title={ subtitle ?? 'Untitled' }>{ price * qty | currency }</h2>
+  ##                     ^^ keyword.operator.null-coalescing.js
+  ##                     ^^ - keyword.operator.formatter.puzzle
+  ##                                             ^ keyword.operator.arithmetic.js
+  ##                                                   ^ keyword.operator.formatter.puzzle
+  ##                                                     ^^^^^^^^ variable.function.formatter.puzzle
+
+    ## the standard formatters are ordinary names after a pipe, including
+    ## `compact_number`, `t`, and `raw` / `newline_to_br` at the end of a text
+    ## interpolation
+
+    <p>{ followers | compact_number } { n | pluralize('comment') } { at | datetime('short') }</p>
+  ##               ^ keyword.operator.formatter.puzzle
+  ##                 ^^^^^^^^^^^^^^ variable.function.formatter.puzzle
+  ##                                        ^^^^^^^^^ variable.function.formatter.puzzle
+  ##                                                  ^^^^^^^^^ string.quoted.single.js
+  ##                                                                      ^^^^^^^^ variable.function.formatter.puzzle
+    <div>{ post.bodyHtml | raw }</div><p>{ note | newline_to_br }</p><p>{ 'cart.title' | t }</p>
+  ##                     ^ keyword.operator.formatter.puzzle
+  ##                       ^^^ variable.function.formatter.puzzle
+  ##                                              ^^^^^^^^^^^^^ variable.function.formatter.puzzle
+  ##                                                                                   ^ keyword.operator.formatter.puzzle
+  ##                                                                                     ^ variable.function.formatter.puzzle
 
 
     ## --- <pre> keeps its whitespace (D168) --- nothing collapses; interpolation
