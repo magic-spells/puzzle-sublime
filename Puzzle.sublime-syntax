@@ -18,11 +18,16 @@ file_extensions:
 first_line_match: '^\s*<puzzle-view(?=[\s/>])'
 
 variables:
-  # A component tag name is a member path — Ident('.'Ident)*, each segment an
-  # identifier, capitalized at the root (D167). Codegen emits the name verbatim
-  # as a JS member expression, so <Frame.Wrapper> is a component family member
-  # and the whole dotted name carries the component scope.
-  puzzle_component_name: '[[:upper:]][[:alnum:]_]*(?:\.[[:alpha:]_][[:alnum:]_]*)*'
+  # A component tag name is a member path — Ident('.'Ident)*, each segment a
+  # '$'-free JavaScript identifier (D167). Codegen emits the name verbatim as a
+  # JS member expression, so <Frame.Wrapper> is a component family member and
+  # the whole dotted name carries the component scope. A tag is a component
+  # when its first character is anything but an ASCII lowercase letter:
+  # <Card>, <Übersicht>, <概要>, <ärmel> and <_x> are components, while
+  # <straße-karte> is an element (HTML's own tag rules claim it).
+  puzzle_tag_id_start: '[_\p{L}\p{Nl}]'
+  puzzle_tag_id_continue: '[_\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]'
+  puzzle_component_name: '(?![a-z]){{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*(?:\.{{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*)*'
   # Composition markers are reserved capitalized tags, matched ahead of the
   # generic component name so <Slot>/<Children>/<Portal>/<Snippet> never fall
   # through to it. They are exact-match names: {{tag_name_break}} is
@@ -624,9 +629,9 @@ contexts:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.inline.table.html
       push: puzzle-raw-tag-content
-    # Everything else — including <Portal>, <Slot/> and <Card/>, which are
-    # plain elements here rather than markers or components.
-    - match: '(</?)({{tag_name}})'
+    # Everything else — including <Portal>, <Slot/>, <Card/> and <Übersicht/>,
+    # which are plain elements here rather than markers or components.
+    - match: '(</?)((?:{{tag_name_start}}|(?![\x00-\x7F]){{puzzle_tag_id_start}}){{tag_name_char}}*)'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.other.html

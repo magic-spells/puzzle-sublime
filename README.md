@@ -87,8 +87,10 @@ Both template sections support:
   both the self-closing and the paired fallback-body spelling
 - Marker arguments — `<Children user={ user }>`, `<Slot name="row" user={ user }>`
   — and `<Snippet fits="row" user group>` bare parameter declarations (D166)
-- Capitalized component tags such as `<AlbumCard />`, including dotted
-  component-family member paths such as `<Frame.Wrapper>` (D167)
+- Component tags such as `<AlbumCard />`, including dotted component-family
+  member paths such as `<Frame.Wrapper>` (D167). A tag is a component when its
+  first character is anything but an ASCII lowercase letter, so `<Übersicht>`,
+  `<概要>` and `<_x>` are components and `<straße-karte>` is an element
 
 HTML comments intentionally suppress Puzzle expressions, so examples like
 `<!-- {#if documentedExample} -->` remain comments.

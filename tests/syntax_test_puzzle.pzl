@@ -299,6 +299,46 @@
    ##^^^^^^^^^^^ entity.name.tag.component.puzzle
    ##^^^^^^^^^^^ - entity.name.tag.marker.puzzle
 
+    ## a tag is a component when its first character is anything but an ASCII
+    ## lowercase letter: identifier letters past ASCII and a leading '_' count
+
+    <Übersicht/> <概要/> <Frame.Übersicht/> <_foo/> <ärmel/>
+   ##^^^^^^^^^ entity.name.tag.component.puzzle
+    ##            ^^ entity.name.tag.component.puzzle
+    ##                  ^^^^^^^^^^^^^^^ entity.name.tag.component.puzzle
+    ##                                     ^^^^ entity.name.tag.component.puzzle
+    ##                                             ^^^^^ entity.name.tag.component.puzzle
+    <Übersicht title={ x }></Übersicht> <概要>body</概要>
+   ##^^^^^^^^^ entity.name.tag.component.puzzle
+    ##         ^^^^^ entity.other.attribute-name
+    ##                 ^ source.js.embedded.puzzle
+    ##                       ^^^^^^^^^ entity.name.tag.component.puzzle
+    ##                                   ^^ entity.name.tag.component.puzzle
+    ##                                            ^^ entity.name.tag.component.puzzle
+
+    ## a tag starting with a-z is an element, with or without non-ASCII after it
+
+    <straße-karte>k</straße-karte> <div>d</div> <my-élément>e</my-élément>
+   ##^^^^^^^^^^^^ entity.name.tag - entity.name.tag.component.puzzle
+    ##               ^^^^^^^^^^^^ entity.name.tag - entity.name.tag.component.puzzle
+    ##                              ^^^ entity.name.tag - entity.name.tag.component.puzzle
+    ##                                     ^^^ entity.name.tag - entity.name.tag.component.puzzle
+    ##                                           ^^^^^^^^^^ entity.name.tag - entity.name.tag.component.puzzle
+    ##                                                         ^^^^^^^^^^ entity.name.tag - entity.name.tag.component.puzzle
+
+    ## names the compiler rejects (D167) keep their ASCII reading: <Frame-x>,
+    ## <Frame:Wrapper> and <Frame.> are not component names, so HTML's generic
+    ## tag rule claims them; <Slot.Foo> is a component, not a marker; and '$'
+    ## never starts a tag name
+
+    <Frame-x/> <Frame:Wrapper/> <Frame./> <Slot.Foo/>
+   ##^^^^^^^ entity.name.tag.other.html - entity.name.tag.component.puzzle
+    ##          ^^^^^^^^^^^^^ entity.name.tag.other.html - entity.name.tag.component.puzzle
+    ##                           ^^^^^^ entity.name.tag.other.html - entity.name.tag.component.puzzle
+    ##                                     ^^^^^^^^ entity.name.tag.component.puzzle - entity.name.tag.marker.puzzle
+    under <$50
+    ##     ^^^ - entity.name.tag
+
 
     ## --- Lowercase marker spellings are compile errors (D134/D144) ---
 
@@ -450,6 +490,10 @@
     ##                              ^^^^ entity.name.tag.other.html
     ##                                     ^^^^ - invalid.illegal.marker.puzzle
     ##                                                   ^^^ keyword.control.end.puzzle
+    {#raw}<Übersicht/><概要>x</概要>{/raw}
+    ##     ^^^^^^^^^ entity.name.tag.other.html - entity.name.tag.component.puzzle
+    ##                 ^^ entity.name.tag.other.html
+    ##                       ^^ entity.name.tag.other.html
 
     ## an HTML comment in a raw body is still a comment
 
