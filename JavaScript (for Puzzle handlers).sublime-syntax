@@ -12,7 +12,8 @@
 # JavaScript (for Puzzle).sublime-syntax):
 #
 #   - a single `|` is a compile error: there is no pipe and no bitwise OR;
-#   - `this` is a compile error: a template never reaches the view instance.
+#   - `this` is a compile error: a template never reaches the view instance;
+#   - there are no regex literals, so every `/` is division.
 scope: source.js.embedded.puzzle-handler
 version: 2
 hidden: true
@@ -35,3 +36,12 @@ contexts:
     - match: '\|(?!\|)=?'
       scope: invalid.illegal.pipe.puzzle
       push: expression-begin
+
+  # A template expression has no regex literals (D176), so a `/` is never the
+  # start of one. JavaScript reads a `/` where an operand is expected as a
+  # regex; here it is division (the compiler reports the missing operand), so
+  # a stray `/` cannot open a regex that runs on to the next `/>`. A
+  # <script> section embeds native JavaScript and keeps its regexes.
+  regexp-complete:
+    - match: /
+      scope: keyword.operator.arithmetic.js

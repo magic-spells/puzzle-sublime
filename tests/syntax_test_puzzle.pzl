@@ -899,6 +899,75 @@ const insideRaw = 1;
 ##                       ^^ - invalid
 
 
+    ## --- A template expression has no regex literals (D176): every slash in
+    ## one is division, whatever precedes it (a non-ASCII name, a trailing-dot
+    ## number, the word of). The self-closing br later on each line is where a
+    ## regex guess would close. A slash in the script section is still a regex.
+
+    <p>{ café / 2 }<br/>after</p>
+##            ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^ - string.regexp
+##                      ^^^^^ - source.js.embedded.puzzle
+    <p>{ 金額 / 2 }<br/>after</p>
+##          ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^ - string.regexp
+##                    ^^^^^ - source.js.embedded.puzzle
+    {#if 価格 / 2 > 1}<br/>{/if}<i>after</i>
+##          ^ keyword.operator.arithmetic.js - string.regexp
+##  ^^^^^^^^^^^^^^^^^^^^^ - string.regexp
+##                               ^^^^^ - source.js.embedded.puzzle
+    <p>{ 5. / 2 }<br/>after</p>
+##          ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^ - string.regexp
+##                    ^^^^^ - source.js.embedded.puzzle
+    <p>{ of / 2 }<br/>after</p>
+##          ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^ - string.regexp
+##                    ^^^^^ - source.js.embedded.puzzle
+    <b title={ 価格 / 2 }><br/>after</b>
+##                ^ keyword.operator.arithmetic.js - string.regexp
+##           ^^^^^^^^^^^^^^^^ - string.regexp
+##                           ^^^^^ - source.js.embedded.puzzle
+    <p>{ a.価格 / 2 }<br/>after</p>
+##            ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^ - string.regexp
+##                      ^^^^^ - source.js.embedded.puzzle
+    <p>{ 𝑥 / 2 }<br/>after</p>
+##         ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^ - string.regexp
+##                   ^^^^^ - source.js.embedded.puzzle
+    <p>{ 😀 / 2 }<br/>after</p>
+##         ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^ - string.regexp
+##                   ^^^^^ - source.js.embedded.puzzle
+    <p>{ 金額/2 }<br/>after</p>
+##         ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^ - string.regexp
+##                  ^^^^^ - source.js.embedded.puzzle
+    <p>{ (金額 / 2) + f(価格 / 3) }<br/>after</p>
+##           ^ keyword.operator.arithmetic.js - string.regexp
+##                       ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ - string.regexp
+##                                  ^^^^^ - source.js.embedded.puzzle
+    <p>{ `${金額 / 2}` }<br/>after</p>
+##             ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^^^^ - string.regexp
+##                         ^^^^^ - source.js.embedded.puzzle
+    <p>{ ok ? 5. / 2 : 1 }<br/>after</p>
+##               ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^^^^^^^^ - string.regexp
+##                             ^^^^^ - source.js.embedded.puzzle
+    <p>{ a && /x/ }<br/>after</p>
+##            ^ keyword.operator.arithmetic.js - string.regexp
+##              ^ keyword.operator.arithmetic.js - string.regexp
+##     ^^^^^^^^^^^^^^^^^ - string.regexp
+##                      ^^^^^ - source.js.embedded.puzzle
+    <button @click={ save(5. / 2) }><br/>after</button>
+##                           ^ keyword.operator.arithmetic.js - string.regexp
+##                 ^^^^^^^^^^^^^^^^^^^^^^ - string.regexp
+##                                       ^^^^^ - source.js.embedded.puzzle
+
+
   </article>
 </puzzle-view>
 ##^^^^^^^^^^^ entity.name.tag.section.puzzle
@@ -930,6 +999,8 @@ export default class Example extends PuzzleView {
     return { bitmask: 1 | 2, logical: true || false };
     ##                  ^ keyword.operator.bitwise.js
     ##                                     ^^ keyword.operator.logical.js
+    const re = /a\/b/g;
+    ##         ^^^^^^^ string.regexp.js
   }
 }
 </script>

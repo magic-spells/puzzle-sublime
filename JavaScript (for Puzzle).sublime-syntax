@@ -18,7 +18,8 @@
 #   - `raw` and `newline_to_br` are legal only as the outermost call of a text
 #     interpolation (see puzzle-expressions), and flagged when called anywhere
 #     else;
-#   - `...` is the inclusive range of a {#for 1...5, n} header.
+#   - `...` is the inclusive range of a {#for 1...5, n} header;
+#   - there are no regex literals, so every `/` is division.
 #
 # Everything else the compiler checks — which methods the method table lists,
 # the excluded operators, `.size` — reads as plain JavaScript here.
@@ -112,3 +113,12 @@ contexts:
     - match: '\|(?!\|)=?'
       scope: invalid.illegal.pipe.puzzle
       push: expression-begin
+
+  # A template expression has no regex literals (D176), so a `/` is never the
+  # start of one. JavaScript reads a `/` where an operand is expected as a
+  # regex; here it is division (the compiler reports the missing operand), so
+  # a stray `/` cannot open a regex that runs on to the next `/>`. A
+  # <script> section embeds native JavaScript and keeps its regexes.
+  regexp-complete:
+    - match: /
+      scope: keyword.operator.arithmetic.js
