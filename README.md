@@ -76,6 +76,8 @@ Both template sections support:
 - Compile-time SVG directives: `{#svg 'icons/heart.svg'}`
 - Template comments: `{## note }` and `{#comment} … {/comment}`
 - Raw blocks: `{#raw} … {/raw}`
+- HTML void elements (`area base br col embed hr img input link meta source
+  track wbr`) with or without the slash: `<br>`, `<br/>`, `<input value={ x } readonly>`
 - Brace escapes: `Use \{ braces \} literally` and `pattern="[0-9]\{5\}"`
 - Dynamic attributes and expressions inside quoted attributes
 - Directive attributes: `key`, `island`, `ref`, `flip`
@@ -99,6 +101,14 @@ are compile errors outside a raw block and are flagged as such. A lowercase
 `<snippet>` is deliberately not flagged: the compiler only steers it to
 `<Snippet>` when it carries `fits` or a bare parameter, so a plain one is
 ordinary markup.
+
+The raw body is one opaque span, as the compiler's section splitter reads it: a
+literal `</puzzle-view>`, `</puzzle-skeleton>` or `</script>` inside it ends
+neither the block nor the section, and the template resumes after `{/raw}`.
+
+A void element's closing tag (`</br>`, `</input>`) is a compile error and is
+flagged `invalid.illegal.void-close-tag.puzzle`, in a raw body too. The match is
+exact and lowercase, so `</Input>` closes a component.
 
 `\{` and `\}` render a literal brace and open no interpolation, matching the
 compiler: the escape is live in template text and in attribute values, quoted
@@ -158,6 +168,7 @@ saved `.sublime-syntax` files without reinstalling the package.
 | A single `\|` in a template expression | `invalid.illegal.pipe.puzzle` |
 | `this` in a template expression | `invalid.illegal.this.puzzle` |
 | `raw(…)` / `newline_to_br(…)` anywhere but the whole of a text interpolation | `invalid.illegal.markup-function.puzzle` |
+| A void element's closing tag (`</br>`) | `invalid.illegal.void-close-tag.puzzle` |
 
 ## Tests
 
@@ -165,12 +176,13 @@ Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-- `tests/syntax_test_puzzle.pzl` — 527 assertions covering the HTML template
+- `tests/syntax_test_puzzle.pzl` — 563 assertions covering the HTML template
   grammar, every shipped Puzzle directive, the expression rules (calls,
   methods, arrow-function arguments, template literals, the function library,
   and where `|`, `this`, `raw` and `newline_to_br` are errors), event
   modifiers, composition markers and their arguments, brace escapes, raw
-  blocks, and the JavaScript, TypeScript and CSS section boundaries.
+  blocks (including section close tags inside a raw body), void elements, and
+  the JavaScript, TypeScript and CSS section boundaries.
 - `tests/syntax_test_conformance.pzl` — generated from the Puzzle expression
   conformance table (`packages/puzzle-lang/conformance/expressions-parse.json`
   in the Puzzle repository). Every expression the compiler accepts is written

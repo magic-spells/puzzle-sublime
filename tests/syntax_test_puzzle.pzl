@@ -842,6 +842,62 @@
     </textarea>
 
 
+    ## --- A {#raw} body is one opaque span --- a literal section close tag
+    ## inside it ends neither the block nor the section, and the template
+    ## resumes after {/raw} (the compiler's section splitter skips the span)
+
+    <pre>{#raw}<puzzle-view>{ sample }</puzzle-view>{/raw}</pre><p>{ sameLine }</p>
+##             ^^^^^^^^^^^^^ meta.block.raw.puzzle
+##                            ^^^^^^ meta.block.raw.puzzle - source.js.embedded.puzzle
+##                                    ^^^^^^^^^^^^^^ meta.block.raw.puzzle - entity.name.tag.section.puzzle
+##                                                                   ^^^^^^^^ source.js.embedded.puzzle - meta.block.raw.puzzle
+    <pre>{#raw}
+</puzzle-view>
+## <- meta.block.raw.puzzle - entity.name.tag.section.puzzle - entity.name.tag.script.puzzle
+</puzzle-skeleton>
+## <- meta.block.raw.puzzle - entity.name.tag.section.puzzle - entity.name.tag.script.puzzle
+</script>
+## <- meta.block.raw.puzzle - entity.name.tag.section.puzzle - entity.name.tag.script.puzzle
+<script>
+## <- meta.block.raw.puzzle - entity.name.tag.section.puzzle - entity.name.tag.script.puzzle
+const insideRaw = 1;
+## <- meta.block.raw.puzzle - source.js.embedded.puzzle
+    {/raw}</pre>
+##    ^^^ keyword.control.end.puzzle
+    <p>{ afterRaw }</p>
+##       ^^^^^^^^ source.js.embedded.puzzle - meta.block.raw.puzzle
+
+    ## --- HTML void elements --- the slash is optional, and a closing tag is
+    ## a compile error, in a raw body too; exact lowercase names only
+
+    <p>a<br>b<br/>c<br />d<hr><img src="a.png"><wbr></p><input value={ v } readonly><i>{ after }</i>
+##       ^^ - invalid
+##            ^^ - invalid
+##                  ^^ - invalid
+##                             ^^^ - invalid
+##                                                       ^^^^^ - invalid
+##                                                                     ^ source.js.embedded.puzzle
+##                                                                         ^^^^^^^^ entity.other.attribute-name.html - invalid
+##                                                                                       ^^^^^ source.js.embedded.puzzle
+    <input type="text"></input> <p>a<br>b</br></p> </img> </wbr> <hr></hr>
+##                       ^^^^^ invalid.illegal.void-close-tag.puzzle
+##                                         ^^ invalid.illegal.void-close-tag.puzzle
+##                                                   ^^^ invalid.illegal.void-close-tag.puzzle
+##                                                          ^^^ invalid.illegal.void-close-tag.puzzle
+##                                                                     ^^ invalid.illegal.void-close-tag.puzzle
+##                                             ^^ - invalid
+    <Input label="x">hint</Input> </brx></brx> </bR> </Br> </p>
+##                         ^^^^^ entity.name.tag.component.puzzle - invalid
+##                                        ^^^ - invalid
+##                                               ^^ - invalid
+##                                                     ^^ - invalid
+##                                                          ^^ - invalid
+    {#raw}<p>a<br>b</br></p>{/raw}
+##             ^^ - invalid
+##                   ^^ meta.block.raw.puzzle invalid.illegal.void-close-tag.puzzle
+##                       ^^ - invalid
+
+
   </article>
 </puzzle-view>
 ##^^^^^^^^^^^ entity.name.tag.section.puzzle
@@ -856,6 +912,10 @@
   ##^^^ comment.block.template.puzzle
     ##  ^^^^^^^^ comment.block.template.puzzle
     ##                ^ punctuation.definition.comment.end.puzzle
+  <pre>{#raw}</puzzle-skeleton>{ skel }{/raw}</pre><i>{ skelLive }</i>
+##           ^^^^^^^^^^^^^^^^^^ meta.block.raw.puzzle - entity.name.tag.section.puzzle
+##                               ^^^^ meta.block.raw.puzzle - source.js.embedded.puzzle
+##                                                      ^^^^^^^^ source.js.embedded.puzzle - meta.block.raw.puzzle
 </puzzle-skeleton>
 ##^^^^^^^^^^^^^^^ entity.name.tag.section.puzzle
 

@@ -40,6 +40,10 @@ variables:
   # <template> likewise stays an ordinary HTML element with no marker meaning.
   puzzle_marker_name: '(?:Children|Slot|Portal|Snippet)'
   puzzle_invalid_marker_name: '(?:children|slot|portal)'
+  # HTML's void elements. The start tag is the whole element, with or without
+  # the slash (<br>, <br/>, <input …>), so a closing tag has nothing to close
+  # and is a compile error. Exact lowercase names only: <Input> is a component.
+  puzzle_void_element: '(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)'
   # Runtime directives the compiler intercepts: they never reach the DOM.
   puzzle_directive_attribute: '(?:key|island|ref|flip)'
   puzzle_identifier: '[_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*'
@@ -98,6 +102,7 @@ contexts:
     - include: puzzle-components
     - include: puzzle-section-tags
     - include: puzzle-invalid-markers
+    - include: puzzle-void-close-tags
 
   # HTML reaches `tag-other` only from `tag`, which only `html`/`main` include,
   # so this prepend is the top-level text scan.
@@ -243,6 +248,16 @@ contexts:
       captures:
         1: punctuation.definition.tag.begin.html
         2: invalid.illegal.marker.puzzle
+      push: tag-other-content
+
+  # A void element's closing tag (</br>, </input>) is a compile error, in
+  # template text and in a {#raw} body alike: HTML stays structural there.
+  # Case-sensitive on purpose, like the marker spellings above.
+  puzzle-void-close-tags:
+    - match: '(</)({{puzzle_void_element}}{{tag_name_break}})'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: invalid.illegal.void-close-tag.puzzle
       push: tag-other-content
 
 ###[ EVENT ATTRIBUTES ]########################################################
@@ -574,6 +589,11 @@ contexts:
   # below. <script> and <style> are absent on purpose: HTML embeds JavaScript
   # and CSS in them, and nothing inside a raw body is a live language.
   puzzle-raw-tags:
+    - match: '(</)({{puzzle_void_element}}{{tag_name_break}})'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: invalid.illegal.void-close-tag.puzzle
+      push: puzzle-raw-tag-content
     - match: '(</?)({{html_structure_tags}})'
       captures:
         1: punctuation.definition.tag.begin.html
