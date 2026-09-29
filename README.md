@@ -15,9 +15,14 @@ New in 0.8.0:
   `pluralize`, `capitalize`, `truncate`, `strip_html`, `strip_newlines`,
   `escape`, `raw`, `newline_to_br`, `json`, `date`, `time`, `datetime`,
   `in_timezone`, `t`, `link` and `timeago`. A bare read of the same name is
-  data, and `x.date()` is a method, so neither gets it. An `@event` handler's
-  own call names the view's handler (`@click={ save(item) }`), so it keeps
-  JavaScript's call scope; a bare call in its arguments is a library call
+  data, and `x.date()` is a method, so neither gets it
+- An `@event` value is a call to one of the view's methods with data
+  arguments (`@click={ select(item.id) }`,
+  `@input={ setName(event.target.value) }`, or a conditional choosing between
+  two handlers). It reads as plain JavaScript: the handler's name and every
+  call in its arguments keep JavaScript's function-call scope, with no library
+  scope and no `raw`/`newline_to_br` rule, even when a name matches a library
+  function. Only `|` and `this` are flagged there
 - A single `|` is a compile error in every template expression — text,
   attribute values, props, marker arguments, `key=`, `flip=`, block headers and
   `@event` handlers — and is flagged: there is no pipe and no bitwise OR. `||`
@@ -27,8 +32,8 @@ New in 0.8.0:
   included, and is flagged; a property named `this` (`x.this`) is not
 - `raw(…)` and `newline_to_br(…)` are legal only as the whole of a text
   interpolation (`{ raw(post.html) }`). Called in an attribute value, prop,
-  marker argument, `key=`, `flip=`, `style`, block header or handler argument,
-  or nested inside another call in a text interpolation, the name is flagged
+  marker argument, `key=`, `flip=`, `style` or block header, or nested inside
+  another call in a text interpolation, the name is flagged
 
 New in 0.7.0:
 
@@ -43,6 +48,9 @@ The package is composed from Sublime's own grammars:
 - `<puzzle-view>` and `<puzzle-skeleton>` extend Sublime's complete HTML grammar
   and add Puzzle's template expressions.
 - `<script>` embeds Sublime's JavaScript grammar.
+- Template expressions use `JavaScript (for Puzzle).sublime-syntax`, and
+  `@event` values `JavaScript (for Puzzle handlers).sublime-syntax`; both
+  extend Sublime's JavaScript grammar and share the `|` and `this` rules.
 - `<script lang="ts">` embeds Sublime's TypeScript grammar.
 - `<style>` and `<style scoped>` embed Sublime's CSS grammar.
 
@@ -157,7 +165,7 @@ Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-- `tests/syntax_test_puzzle.pzl` — 513 assertions covering the HTML template
+- `tests/syntax_test_puzzle.pzl` — 527 assertions covering the HTML template
   grammar, every shipped Puzzle directive, the expression rules (calls,
   methods, arrow-function arguments, template literals, the function library,
   and where `|`, `this`, `raw` and `newline_to_br` are errors), event
@@ -211,7 +219,4 @@ The `raw` / `newline_to_br` rule is best-effort. The grammar treats the first
 token of a text interpolation as its outermost call, so `{ raw(a) + b }` is
 not flagged, and `{ (raw(a)) }` is flagged although the compiler accepts it.
 The rule is also not tracked inside a text-only element (`<textarea>`,
-`<title>`, …) or inside `<svg>`/`<math>`, where the compiler rejects it. In an
-`@event` handler, the handler's own call — the first token, or the first
-token of each branch of a top-level conditional — is a view handler, so
-`@click={ raw(h) }` is not flagged.
+`<title>`, …) or inside `<svg>`/`<math>`, where the compiler rejects it.

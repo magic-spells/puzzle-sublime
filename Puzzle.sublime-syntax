@@ -337,11 +337,12 @@ contexts:
       pop: 1
     - include: immediately-pop
 
-  # An @event value is a handler: a template expression (D176) with `event` in
-  # scope, whose own call names a view handler rather than a library function
-  # (puzzle-handler-expressions). The brace-only form is the only legal
-  # spelling (`={ ... }`); anything else falls back to the generic HTML value
-  # so an erroneous quoted value still reads as a string.
+  # An @event value is a handler: a call to one of the view's methods with
+  # data arguments, `event` in scope. It reads as plain JavaScript through
+  # JavaScript (for Puzzle handlers), which flags only `|` and `this`: no
+  # library scope and no markup-function rule. The brace-only form is the only
+  # legal spelling (`={ ... }`); anything else falls back to the generic HTML
+  # value so an erroneous quoted value still reads as a string.
   puzzle-event-attribute-assignment:
     - meta_include_prototype: false
     - match: '='
@@ -363,7 +364,7 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-handler-expressions
+    - include: scope:source.js.embedded.puzzle-handler#expressions
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 

@@ -2,7 +2,9 @@
 ---
 # JavaScript expression grammar used only inside Puzzle template braces: text
 # and attribute interpolation, brace-only attribute values, component props,
-# marker arguments, key=, flip=, every block header and @event handlers.
+# marker arguments, key=, flip= and every block header. An @event value is a
+# plain call to a view handler and uses JavaScript (for Puzzle handlers)
+# instead, which shares only the `|` and `this` rules.
 #
 # A Puzzle template expression is a closed, JavaScript-shaped grammar (D176).
 # Extending Sublime's native JavaScript grammar gives it the same highlighting
@@ -15,8 +17,7 @@
 #   - the function library gets a support scope when it is called bare;
 #   - `raw` and `newline_to_br` are legal only as the outermost call of a text
 #     interpolation (see puzzle-expressions), and flagged when called anywhere
-#     else — except as an @event handler's own call, which names a view
-#     handler (see puzzle-handler-expressions);
+#     else;
 #   - `...` is the inclusive range of a {#for 1...5, n} header.
 #
 # Everything else the compiler checks — which methods the method table lists,
@@ -47,8 +48,7 @@ variables:
 contexts:
   # Entry point for a text interpolation. Attribute values, props, marker
   # arguments, key=, flip= and block headers include JavaScript's own
-  # `expressions`, and @event handlers puzzle-handler-expressions; the rules
-  # below apply at every depth of all of them.
+  # `expressions`; the rules below apply at every depth of all of them.
   #
   # A text interpolation may be one markup call, `{ raw(post.html) }`: its
   # first token is the only place `raw(` or `newline_to_br(` is legal. That is
@@ -65,47 +65,6 @@ contexts:
         1: support.function.library.puzzle
       pop: 1
     - include: expression-begin
-
-  # Entry point for an @event handler value. A handler is a bare name, one
-  # call, or a conditional whose branches are each one of those (or null), and
-  # each such call names a VIEW handler, not a library function (D176 rule 4):
-  # `@click={ raw(h) }` calls the view's own `raw`. So the handler's own call —
-  # the first token, and the first token of each top-level branch — keeps
-  # JavaScript's function-call scope. Its arguments are ordinary template
-  # expressions, where a bare call is a library call again:
-  # `@click={ save(currency(x)) }`, and `save(raw(h))` is the markup error.
-  puzzle-handler-expressions:
-    - match: (?=\S)
-      push: [puzzle-handler-expression-end, puzzle-handler-form-begin]
-
-  puzzle-handler-form-begin:
-    - match: '(?!this{{identifier_break}})({{identifier_name}}){{nothing}}{{function_call_after_lookahead}}'
-      scope: meta.function-call.js
-      captures:
-        1: variable.function.js
-      pop: 1
-    - include: expression-begin
-
-  # JavaScript's expression-end with a Puzzle copy of the ternary, whose
-  # branches start with a handler form again. Binary operators push
-  # expression-begin on top of this frame, so their right side is an ordinary
-  # expression.
-  puzzle-handler-expression-end:
-    - include: postfix-operators
-    - include: binary-operators
-    - match: '\?(?=[^.]|\.[0-9])'
-      scope: keyword.operator.ternary.js
-      set:
-        - puzzle-handler-ternary-expect-colon
-        - expression-end-no-comma
-        - puzzle-handler-form-begin
-    - include: left-expression-end
-
-  puzzle-handler-ternary-expect-colon:
-    - match: ':'
-      scope: keyword.operator.ternary.js
-      set: [expression-end-no-comma, puzzle-handler-form-begin]
-    - include: else-pop
 
   expression-begin:
     - meta_prepend: true

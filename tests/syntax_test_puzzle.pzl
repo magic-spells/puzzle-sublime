@@ -611,21 +611,31 @@
 ##                                                                            ^^^^^ - support.function.library.puzzle
 ##                                                                                         ^^^^^^^^ - support.function.library.puzzle
 
-    ## an @event handler's own call names the view's handler, so it keeps
-    ## JavaScript's call scope; a bare call in its arguments is a library call
+    ## an @event value is a plain call to a view handler with data arguments:
+    ## the handler's name and every call in its arguments keep JavaScript's
+    ## call scope, even when the name matches a library function
 
     <button @click={ save(currency(x)) } @input={ t(event.target.value) } @blur={ on ? date(d) : null }>x</button>
 ##                   ^^^^ variable.function.js
 ##                   ^^^^ - support.function.library.puzzle
-##                        ^^^^^^^^ support.function.library.puzzle
-##                                                ^ variable.function.js
-##                                                ^ - support.function.library.puzzle
+##                        ^^^^^^^^ variable.function.js
+##                        ^^^^^^^^ - support.function.library.puzzle
+##                                                ^^ - support.function.library.puzzle
 ##                                                  ^^^^^ - invalid
 ##                                                                                   ^ keyword.operator.ternary.js
 ##                                                                                     ^^^^ variable.function.js
 ##                                                                                     ^^^^ - support.function.library.puzzle
-##                                                                                             ^ keyword.operator.ternary.js
 ##                                                                                               ^^^^ constant.language.null.js
+    <button @click={ date(x) } @input={ select(item.id) } @blur={ on ? save(truncate(s, 3)) : link(p) }>x</button>
+##                   ^^^^ variable.function.js
+##                   ^^^^ - support.function.library.puzzle
+##                                      ^^^^^^ variable.function.js
+##                                                                     ^^^^ variable.function.js
+##                                                                          ^^^^^^^^ variable.function.js
+##                                                                          ^^^^^^^^ - support.function.library.puzzle
+##                                                                                            ^^^^ variable.function.js
+##                                                                                            ^^^^ - support.function.library.puzzle
+##                                                                                                    ^ punctuation.section.embedded.end.puzzle
 
     ## --- Object literals in arguments --- the inner braces are JavaScript, not a
     ## nested interpolation, and the outer `}` still closes
@@ -783,8 +793,7 @@
 ##       ^^^ invalid.illegal.markup-function.puzzle
 ##                                         ^^^ invalid.illegal.markup-function.puzzle
 
-    ## a bare read, a method, a longer name, an object key and an @event handler's
-    ## own call (which names the view's handler) are not flagged
+    ## a bare read, a method, a longer name and an object key are not flagged
 
     <p title={ raw }>{ x.raw(1) } { raw_text(1) } { rawValue(x) } { f({ raw: 1 }) }</p>
 ##             ^^^ - invalid
@@ -792,18 +801,25 @@
 ##                                  ^^^^^^^^ - invalid
 ##                                                  ^^^^^^^^ - invalid
 ##                                                                      ^^^^ - invalid
-    <button @click={ raw(h) } @input={ newline_to_br(event.target.value) }>x</button>
-##                   ^^^ - invalid
-##                                     ^^^^^^^^^^^^^ - invalid
 
-    ## a markup call in a handler's arguments is flagged
+    ## an @event value is a plain call: `raw` and `newline_to_br` are ordinary
+    ## function names there, as the handler or anywhere in its arguments
 
-    <button @click={ save(raw(h)) } @input={ on ? raw(h) : null } @blur={ on ? f(newline_to_br(s)) : raw(s) }>x</button>
-##                        ^^^ invalid.illegal.markup-function.puzzle
-##                                                ^^^ - invalid
-##                                                ^^^ variable.function.js
-##                                                                               ^^^^^^^^^^^^^ invalid.illegal.markup-function.puzzle
-##                                                                                                   ^^^ - invalid
+    <button @click={ save(raw(x)) } @input={ newline_to_br(event.target.value) } @blur={ raw(h) }>x</button>
+##                   ^^^^ variable.function.js
+##                        ^^^ variable.function.js
+##                        ^^^ - invalid
+##                        ^^^ - support.function.library.puzzle
+##                                           ^^^^^^^^^^^^^ variable.function.js
+##                                           ^^^^^^^^^^^^^ - invalid
+##                                                                                       ^^^ variable.function.js
+##                                                                                       ^^^ - invalid
+    <button @click={ on ? f(newline_to_br(s)) : raw(s) } @input={ save(`${ raw(h) }`, [newline_to_br(n)]) }>x</button>
+##                          ^^^^^^^^^^^^^ - invalid
+##                                              ^^^ - invalid
+##                                                                         ^^^ - invalid
+##                                                                         ^^^ variable.function.js
+##                                                                                     ^^^^^^^^^^^^^ - invalid
 
 
     ## --- <pre> keeps its whitespace (D168) --- nothing collapses; interpolation

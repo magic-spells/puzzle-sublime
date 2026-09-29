@@ -1,0 +1,37 @@
+%YAML 1.2
+---
+# JavaScript expression grammar used only inside a Puzzle @event value.
+#
+# A handler is a call to one of the view's methods with data arguments
+# (`@click={ select(item.id) }`, `@input={ setName(event.target.value) }`, or a
+# conditional choosing between two handlers). It reads as plain JavaScript: the
+# handler's name and every call in its arguments keep JavaScript's
+# function-call scope, with no library scope and no markup-function rule, even
+# when a name matches a library function. Only the two compile errors every
+# template expression shares are added (the same rules as
+# JavaScript (for Puzzle).sublime-syntax):
+#
+#   - a single `|` is a compile error: there is no pipe and no bitwise OR;
+#   - `this` is a compile error: a template never reaches the view instance.
+scope: source.js.embedded.puzzle-handler
+version: 2
+hidden: true
+
+extends: Packages/JavaScript/JavaScript.sublime-syntax
+
+contexts:
+  expression-begin:
+    - meta_prepend: true
+    # `this` is not a template identifier (D176 rule 7). A property named
+    # `this` (`x.this`) is read by property-access, never here.
+    - match: this{{identifier_break}}
+      scope: invalid.illegal.this.puzzle
+      pop: 1
+
+  # A single `|` is a compile error (D176 rule 1). `|=` is flagged with it;
+  # `||` and `||=` keep their native meaning.
+  binary-operators:
+    - meta_prepend: true
+    - match: '\|(?!\|)=?'
+      scope: invalid.illegal.pipe.puzzle
+      push: expression-begin
