@@ -5,19 +5,35 @@ Version **0.4.0** — tracks the Puzzle **0.8.0** template grammar.
 
 New in 0.8.0:
 
-- Formatter chains in every value position (D173) — brace-only attribute
-  values (`title={ price | currency }`), component props and marker arguments,
-  and the `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers, alongside
-  text and quoted-attribute interpolation
-- Only a top-level single `|` is a pipe: inside parentheses, call arguments or
-  brackets it is JavaScript's bitwise OR, and an `@event` handler body is plain
-  JavaScript throughout
-- Formatter names may contain `-` after the first character (`blank-ish`)
-- A pipe in a `{#for}` header or a `{:when}` value is a compile error and is
-  flagged as one, as is a pipe not followed by a formatter name
-  (`{ w / 2 | 0 }`, `{ x |= 2 }`, `{ x | f g }`, `{ x | f.g }`)
-- Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
-  JavaScript, never a nested interpolation
+- Template expressions are JavaScript-shaped (D176) and are highlighted as
+  JavaScript: function calls (`{ currency(price) }`), method calls
+  (`{ name.trim() }`), arrow functions as arguments
+  (`{#for t in todos.filter(t => !t.done)}`), template literals, object and
+  array literals (`{ t('cart.count', { count: items.length }) }`), `??` and `?.`
+- The function library gets its own scope when called bare: `round`,
+  `currency`, `percentage`, `number_with_delimiter`, `compact_number`,
+  `pluralize`, `capitalize`, `truncate`, `strip_html`, `strip_newlines`,
+  `escape`, `raw`, `newline_to_br`, `json`, `date`, `time`, `datetime`,
+  `in_timezone`, `t`, `link` and `timeago`. A bare read of the same name is
+  data, and `x.date()` is a method, so neither gets it
+- An `@event` value is a call to one of the view's methods with data
+  arguments (`@click={ select(item.id) }`,
+  `@input={ setName(event.target.value) }`, or a conditional choosing between
+  two handlers). It reads as plain JavaScript: the handler's name and every
+  call in its arguments keep JavaScript's function-call scope, with no library
+  scope and no `raw`/`newline_to_br` rule, even when a name matches a library
+  function. Only `|` and `this` are flagged there
+- A single `|` is a compile error in every template expression — text,
+  attribute values, props, marker arguments, `key=`, `flip=`, block headers and
+  `@event` handlers — and is flagged: there is no pipe and no bitwise OR. `||`
+  stays logical OR, and a `|` inside a string or a template literal's text is
+  text
+- `this` is a compile error in every template expression, `@event` handlers
+  included, and is flagged; a property named `this` (`x.this`) is not
+- `raw(…)` and `newline_to_br(…)` are legal only as the whole of a text
+  interpolation (`{ raw(post.html) }`). Called in an attribute value, prop,
+  marker argument, `key=`, `flip=`, `style` or block header, or nested inside
+  another call in a text interpolation, the name is flagged
 
 New in 0.7.0:
 
@@ -27,11 +43,14 @@ New in 0.7.0:
 - The `\{` / `\}` brace escape, which renders a literal brace instead of opening
   an interpolation — in template text and in attribute values alike
 
-The package follows the same composition model as Sublime's Svelte syntax:
+The package is composed from Sublime's own grammars:
 
 - `<puzzle-view>` and `<puzzle-skeleton>` extend Sublime's complete HTML grammar
-  and add Puzzle's Svelte/Liquid-style template expressions.
+  and add Puzzle's template expressions.
 - `<script>` embeds Sublime's JavaScript grammar.
+- Template expressions use `JavaScript (for Puzzle).sublime-syntax`, and
+  `@event` values `JavaScript (for Puzzle handlers).sublime-syntax`; both
+  extend Sublime's JavaScript grammar and share the `|` and `this` rules.
 - `<script lang="ts">` embeds Sublime's TypeScript grammar.
 - `<style>` and `<style scoped>` embed Sublime's CSS grammar.
 
@@ -43,11 +62,13 @@ the entire file.
 
 Both template sections support:
 
-- JavaScript interpolation: `{ user.name }`
-- Formatter chains: `{ price | currency('$', 2) | trim }`, in every value
-  position — text and attribute interpolation, brace-only attribute values
-  (`title={ price | currency }`), component props, marker arguments, and the
-  `{#if}`, `{:else if}`, `{#unless}` and `{#case}` headers
+- Expression interpolation: `{ user.name }`, `{ items.length }`,
+  `{ subtitle ?? 'Untitled' }`, `{ currency(price) }`,
+  `{ truncate(post.body, 120) }`, `` { `${first} ${last}` } ``
+- Function calls in every position: text and attribute interpolation,
+  brace-only attribute values (`title={ currency(price) }`), component props,
+  marker arguments and block headers (`{#if items.some(i => i.done)}`)
+- Object-literal arguments: `{ t('cart.count', { count: n }) }`
 - Conditionals: `{#if}`, `{:else if}`, `{:else}`, `{/if}`
 - Inverted conditionals: `{#unless}` and `{/unless}`
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
@@ -55,6 +76,8 @@ Both template sections support:
 - Compile-time SVG directives: `{#svg 'icons/heart.svg'}`
 - Template comments: `{## note }` and `{#comment} … {/comment}`
 - Raw blocks: `{#raw} … {/raw}`
+- HTML void elements (`area base br col embed hr img input link meta source
+  track wbr`) with or without the slash: `<br>`, `<br/>`, `<input value={ x } readonly>`
 - Brace escapes: `Use \{ braces \} literally` and `pattern="[0-9]\{5\}"`
 - Dynamic attributes and expressions inside quoted attributes
 - Directive attributes: `key`, `island`, `ref`, `flip`
@@ -64,20 +87,30 @@ Both template sections support:
   both the self-closing and the paired fallback-body spelling
 - Marker arguments — `<Children user={ user }>`, `<Slot name="row" user={ user }>`
   — and `<Snippet fits="row" user group>` bare parameter declarations (D166)
-- Capitalized component tags such as `<AlbumCard />`, including dotted
-  component-family member paths such as `<Frame.Wrapper>` (D167)
+- Component tags such as `<AlbumCard />`, including dotted component-family
+  member paths such as `<Frame.Wrapper>` (D167). A tag is a component when its
+  first character is anything but an ASCII lowercase letter, so `<Übersicht>`,
+  `<概要>` and `<_x>` are components and `<straße-karte>` is an element
 
 HTML comments intentionally suppress Puzzle expressions, so examples like
 `<!-- {#if documentedExample} -->` remain comments.
 
 A `{#raw}` body is highlighted the way the compiler reads it: braces are inert
-there — no interpolation, block tags, formatter pipes or `@event` bindings —
+there — no interpolation, block tags, expressions or `@event` bindings —
 while HTML stays structural, so `<b>` is still an element and `<Slot/>` is a
 plain tag rather than a marker. Lowercase `<slot>`, `<children>` and `<portal>`
 are compile errors outside a raw block and are flagged as such. A lowercase
 `<snippet>` is deliberately not flagged: the compiler only steers it to
 `<Snippet>` when it carries `fits` or a bare parameter, so a plain one is
 ordinary markup.
+
+The raw body is one opaque span, as the compiler's section splitter reads it: a
+literal `</puzzle-view>`, `</puzzle-skeleton>` or `</script>` inside it ends
+neither the block nor the section, and the template resumes after `{/raw}`.
+
+A void element's closing tag (`</br>`, `</input>`) is a compile error and is
+flagged `invalid.illegal.void-close-tag.puzzle`, in a raw body too. The match is
+exact and lowercase, so `</Input>` closes a component.
 
 `\{` and `\}` render a literal brace and open no interpolation, matching the
 compiler: the escape is live in template text and in attribute values, quoted
@@ -128,26 +161,41 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Directive attribute | `entity.other.attribute-name.directive.puzzle` |
 | Raw block body | `meta.block.raw.puzzle` |
 | Interpolation | `meta.interpolation.puzzle` |
-| Formatter pipe | `keyword.operator.formatter.puzzle` |
-| Formatter name | `variable.function.formatter.puzzle` |
+| Library function called bare | `support.function.library.puzzle` |
 | Event/action sigil (`@`) | `keyword.operator.event.puzzle` |
 | Event/action name | `entity.other.attribute-name.event.puzzle` |
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
-| Pipe in a `{#for}` header or `{:when}` value, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
+| A single `\|` in a template expression | `invalid.illegal.pipe.puzzle` |
+| `this` in a template expression | `invalid.illegal.this.puzzle` |
+| `raw(…)` / `newline_to_br(…)` anywhere but the whole of a text interpolation | `invalid.illegal.markup-function.puzzle` |
+| A void element's closing tag (`</br>`) | `invalid.illegal.void-close-tag.puzzle` |
 
 ## Tests
 
-Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
+Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-442 assertions covering the HTML template grammar, every shipped Puzzle
-directive, formatter chains in every value position (and the positions where a
-pipe is JavaScript or an error), event modifiers, composition markers and their
-arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
-section boundaries.
+- `tests/syntax_test_puzzle.pzl` — 564 assertions covering the HTML template
+  grammar, every shipped Puzzle directive, the expression rules (calls,
+  methods, arrow-function arguments, template literals, the function library,
+  and where `|`, `this`, `raw` and `newline_to_br` are errors), event
+  modifiers, composition markers and their arguments, brace escapes, raw
+  blocks (including section close tags inside a raw body), void elements, and
+  the JavaScript, TypeScript and CSS section boundaries.
+- `tests/syntax_test_conformance.pzl` — generated from the Puzzle expression
+  conformance table (`packages/puzzle-lang/conformance/expressions-parse.json`
+  in the Puzzle repository). Every expression the compiler accepts is written
+  into a text interpolation, a brace-only attribute value, a quoted attribute
+  value, an `{#if}` header and an `@event` handler, and asserted to carry no
+  `invalid` scope and to close on the right brace — 186 cases, 2759
+  assertions. Regenerate it after the table changes:
+
+  ```bash
+  python3 tests/generate_conformance_test.py path/to/expressions-parse.json
+  ```
 
 The runner is Sublime's own — there is no external CLI — but it can be driven
 without touching the UI, provided this repository is symlinked into `Packages/`
@@ -172,8 +220,17 @@ inside the template embeds JavaScript, and a `{#raw}` block written inside it is
 highlighted as JavaScript rather than as a raw body. Raw blocks in ordinary
 template text are unaffected.
 
-Formatter pipes follow the compiler's top-level rule by grammar structure, not
-by counting brackets, so one edge differs: a `|` in the middle branch of a
-ternary (`{ a ? b | x : c }`) reads as bitwise OR, where the compiler splits
-there and rejects `x : c` as a formatter name. A pipe after the ternary's last
-branch (`{ on ? a : b | upcase }`) is a formatter, as it should be.
+The expression language (D176) is the compiler's to enforce beyond the three
+rules above. An expression is highlighted with JavaScript's own scopes, so a
+method the method table does not list, `.size`, `new`, `typeof`, `**`,
+`++`, assignment, a regex literal, spread or an excluded global reads as
+JavaScript rather than as an error; the compiler reports each with a
+positioned message. Which bare calls resolve is a compile-time check too: an
+app function registered through the `formatters` config keeps JavaScript's
+function-call scope, since the grammar cannot know its name.
+
+The `raw` / `newline_to_br` rule is best-effort. The grammar treats the first
+token of a text interpolation as its outermost call, so `{ raw(a) + b }` is
+not flagged, and `{ (raw(a)) }` is flagged although the compiler accepts it.
+The rule is also not tracked inside a text-only element (`<textarea>`,
+`<title>`, …) or inside `<svg>`/`<math>`, where the compiler rejects it.

@@ -1,9 +1,30 @@
 %YAML 1.2
 ---
-# JavaScript expression grammar used only inside Puzzle template braces.
-# Extending Sublime's native JavaScript grammar gives expressions the same
-# highlighting as a .js file while allowing Puzzle formatter pipes and range
-# loops to receive framework-specific scopes.
+# JavaScript expression grammar used only inside Puzzle template braces: text
+# and attribute interpolation, brace-only attribute values, component props,
+# marker arguments, key=, flip= and every block header. An @event value is a
+# plain call to a view handler and uses JavaScript (for Puzzle handlers)
+# instead, which shares only the `|` and `this` rules.
+#
+# A Puzzle template expression is a closed, JavaScript-shaped grammar (D176).
+# Extending Sublime's native JavaScript grammar gives it the same highlighting
+# as a .js file — calls, methods, arrow-function arguments, template literals,
+# object and array literals, `??`, `?.` — and the rules below add only what is
+# Puzzle's own:
+#
+#   - a single `|` is a compile error: there is no pipe and no bitwise OR;
+#   - `this` is a compile error: a template never reaches the view instance;
+#   - the function library gets a support scope when it is called bare;
+#   - `raw` and `newline_to_br` are legal only as the outermost call of a text
+#     interpolation (see puzzle-expressions), and flagged when called anywhere
+#     else;
+#   - `...` is the inclusive range of a {#for 1...5, n} header;
+#   - there are no regex literals, so every `/` is division.
+#
+# Everything else the compiler checks — which methods the method table lists,
+# the excluded operators, `.size` — reads as plain JavaScript here.
+#
+# Nothing here reaches a <script> section, which embeds native JavaScript.
 scope: source.js.embedded.puzzle
 version: 2
 hidden: true
@@ -11,123 +32,61 @@ hidden: true
 extends: Packages/JavaScript/JavaScript.sublime-syntax
 
 variables:
-  # isFormatterName in the compiler: `[A-Za-z_$]` then `[A-Za-z0-9_$-]*`. ASCII
-  # only, and `-` is legal after the first character (`blank-ish`).
-  puzzle_formatter_name: '[A-Za-z_$][A-Za-z0-9_$-]*'
-  # A formatter pipe is a single `|`: `||` stays logical OR, `|=` and `||=`
-  # stay assignment. No lookbehind is needed (and Sublime's sregex engine does
-  # not support one): binary-operators consumes `||` whole, so its second
-  # character is never a match position.
-  puzzle_pipe: '\|(?![|=])'
-  # What follows a pipe must be a formatter name, bare or called, and then the
-  # end of the chain step: `(`, the next `|`, the closing `}`, or the end of the
-  # line (a chain continued below). Anything else — `| 0`, `| f g`, `| f.g`,
-  # `|= 2` — is a compile error (notFormatterError in the compiler).
-  puzzle_formatter_step: '\s*{{puzzle_formatter_name}}\s*(?:[(|}]|$)'
+  # The shipped function library: the standard set plus link and timeago.
+  # App functions registered through the formatters config are called the same
+  # way but are not known here, so they keep JavaScript's function-call scope.
+  puzzle_library_function: |-
+    (?x:
+      round | currency | percentage | number_with_delimiter | compact_number
+    | pluralize | capitalize | truncate | strip_html | strip_newlines | escape
+    | raw | newline_to_br | json | date | time | datetime | in_timezone | t
+    | link | timeago
+    ){{identifier_break}}
+  # The markup functions: their output is markup, so only a text position can
+  # render it, and only as the whole of the interpolation.
+  puzzle_markup_function: (?:raw|newline_to_br){{identifier_break}}
 
 contexts:
-  # Entry points. The Puzzle grammar includes exactly one of these per brace
-  # position, and never JavaScript's own `expressions`:
+  # Entry point for a text interpolation. Attribute values, props, marker
+  # arguments, key=, flip= and block headers include JavaScript's own
+  # `expressions`; the rules below apply at every depth of all of them.
   #
-  #   puzzle-expressions         a value position — text and attribute
-  #                              interpolation, brace-only attribute values,
-  #                              component props, marker arguments, and the
-  #                              {#if}/{:else if}/{#unless}/{#case} headers.
-  #                              A top-level `|` is a formatter pipe (D173 V1).
-  #   puzzle-nopipe-expressions  the {#for} header and {:when} values. A
-  #                              top-level `|` there is a compile error.
-  #   expressions (native)       @event handler bodies: plain JavaScript, so
-  #                              `|` is bitwise OR.
-  #
-  # "Top-level" is the compiler's rule (splitTopLevel): a `|` inside a string,
-  # regex, parentheses, brackets or braces is not a split point. Only the
-  # outermost expression-end frame below knows about pipes; every nested frame
-  # — a group, call arguments, an array, an object literal, a subscript — is
-  # pushed by native JavaScript rules with the native expression-end, where
-  # `|` is bitwise OR. That is also why `{ t({ name: user.name }) }` needs no
-  # special handling: the inner braces are JavaScript's own object literal and
-  # balance there, so the interpolation still closes on the outer `}`.
+  # A text interpolation may be one markup call, `{ raw(post.html) }`: its
+  # first token is the only place `raw(` or `newline_to_br(` is legal. That is
+  # a best-effort reading of "the outermost call": `{ raw(a) + b }` is not
+  # flagged here, and the compiler reports it.
   puzzle-expressions:
-    - match: '(?=\S)'
-      push: [puzzle-expression-end, expression-begin]
+    - match: (?=\S)
+      push: [expression-end, puzzle-text-expression-begin]
 
-  puzzle-nopipe-expressions:
-    - match: '(?=\S)'
-      push: [puzzle-nopipe-expression-end, expression-begin]
-
-  # JavaScript's expression-end with the formatter pipe in front. Binary
-  # operators push expression-begin on top of this frame, so it survives the
-  # whole top-level expression; the ternary replaces its frame with `set`, so
-  # it has a Puzzle copy that restores this one after the `:`.
-  puzzle-expression-end:
-    - include: puzzle-invalid-pipe
-    - match: '{{puzzle_pipe}}'
-      scope: keyword.operator.formatter.puzzle
-      push: puzzle-formatter-name
-    - include: puzzle-range-operator
-    - include: postfix-operators
-    - include: binary-operators
-    - include: puzzle-ternary-operator
-    - include: left-expression-end
-
-  puzzle-nopipe-expression-end:
-    - include: puzzle-invalid-pipe
-    # Every top-level pipe is an error here, so the name after it is read as
-    # plain JavaScript rather than given the formatter scope.
-    - match: '{{puzzle_pipe}}'
-      scope: invalid.illegal.formatter.puzzle
-      push: expression-begin
-    - include: puzzle-range-operator
-    - include: postfix-operators
-    - include: binary-operators
-    - include: puzzle-nopipe-ternary-operator
-    - include: left-expression-end
-
-  # A pipe in a value position that cannot start a formatter step. Listed
-  # ahead of binary-operators, which would otherwise read it as bitwise OR or
-  # `|=` assignment. The operand after it is ordinary JavaScript.
-  puzzle-invalid-pipe:
-    - match: '\|='
-      scope: invalid.illegal.formatter.puzzle
-      push: expression-begin
-    - match: '\|(?![|=])(?!{{puzzle_formatter_step}})'
-      scope: invalid.illegal.formatter.puzzle
-      push: expression-begin
-
-  puzzle-ternary-operator:
-    - match: '\?(?=[^.]|\.[0-9])'
-      scope: keyword.operator.ternary.js
-      set:
-        - puzzle-ternary-operator-expect-colon
-        - expression-no-comma
-
-  puzzle-ternary-operator-expect-colon:
-    - match: ':'
-      scope: keyword.operator.ternary.js
-      set: [puzzle-expression-end, expression-begin]
-    - include: else-pop
-
-  puzzle-nopipe-ternary-operator:
-    - match: '\?(?=[^.]|\.[0-9])'
-      scope: keyword.operator.ternary.js
-      set:
-        - puzzle-nopipe-ternary-operator-expect-colon
-        - expression-no-comma
-
-  puzzle-nopipe-ternary-operator-expect-colon:
-    - match: ':'
-      scope: keyword.operator.ternary.js
-      set: [puzzle-nopipe-expression-end, expression-begin]
-    - include: else-pop
-
-  # Puzzle's inclusive range form: {#for 1...5, n}
-  puzzle-range-operator:
-    - match: '\.\.\.'
-      scope: keyword.operator.range.puzzle
-      push: expression-begin
+  puzzle-text-expression-begin:
+    - match: '({{puzzle_markup_function}}){{nothing}}{{function_call_after_lookahead}}'
+      scope: meta.function-call.js
+      captures:
+        1: support.function.library.puzzle
+      pop: 1
+    - include: expression-begin
 
   expression-begin:
     - meta_prepend: true
+    # `this` is not a template identifier (D176 rule 7). A property named
+    # `this` (`x.this`) is read by property-access, never here.
+    - match: this{{identifier_break}}
+      scope: invalid.illegal.this.puzzle
+      pop: 1
+    # A markup function anywhere but the start of a text interpolation.
+    - match: '({{puzzle_markup_function}}){{nothing}}{{function_call_after_lookahead}}'
+      scope: meta.function-call.js
+      captures:
+        1: invalid.illegal.markup-function.puzzle
+      pop: 1
+    # A bare call to a library function. A bare read of the same name is data
+    # (`{ date }`), and `x.date()` is a method, so both stay JavaScript.
+    - match: '({{puzzle_library_function}}){{nothing}}{{function_call_after_lookahead}}'
+      scope: meta.function-call.js
+      captures:
+        1: support.function.library.puzzle
+      pop: 1
     # Native JavaScript accepts `1.` as a float, so without this guard it eats
     # the first dot in Puzzle's `1...4` range before the range operator can be
     # seen. Pop exactly like JavaScript's native number rules do.
@@ -135,13 +94,31 @@ contexts:
       scope: meta.number.integer.decimal.js constant.numeric.value.js
       pop: 1
 
-  # The name after a pipe, bare or called: `| trim`, `| currency('$', 2)`. The
-  # argument list is matched afterwards by the frame underneath, as an ordinary
-  # call, so object-literal arguments (`| t({ name })`) are native JavaScript.
-  puzzle-formatter-name:
-    - meta_include_prototype: false
-    - match: '\s*({{puzzle_formatter_name}})'
-      captures:
-        1: variable.function.formatter.puzzle
-      pop: 1
-    - include: else-pop
+  expression-end:
+    - meta_prepend: true
+    # Puzzle's inclusive range form: {#for 1...5, n}. In an operator position
+    # `...` means nothing else, so it needs no header-only context.
+    - match: '\.\.\.'
+      scope: keyword.operator.range.puzzle
+      push: expression-begin
+
+  # A single `|` is a compile error: templates have no pipe and no bitwise OR
+  # (D176 rule 1). `|=` is flagged with it. `||` and `||=` keep their native
+  # meaning: the lookahead skips their first character, and binary-operators
+  # consumes them whole before their second is ever a match position. A `|`
+  # inside a string or a template literal's text is string content and never
+  # reaches this context.
+  binary-operators:
+    - meta_prepend: true
+    - match: '\|(?!\|)=?'
+      scope: invalid.illegal.pipe.puzzle
+      push: expression-begin
+
+  # A template expression has no regex literals (D176), so a `/` is never the
+  # start of one. JavaScript reads a `/` where an operand is expected as a
+  # regex; here it is division (the compiler reports the missing operand), so
+  # a stray `/` cannot open a regex that runs on to the next `/>`. A
+  # <script> section embeds native JavaScript and keeps its regexes.
+  regexp-complete:
+    - match: /
+      scope: keyword.operator.arithmetic.js

@@ -2,8 +2,8 @@
 ---
 # Puzzle single-file components (.pzl) for Sublime Text 4.
 #
-# The template sections extend Sublime's complete HTML grammar, just like the
-# Svelte package does. Puzzle expressions are injected into normal HTML text
+# The template sections extend Sublime's complete HTML grammar. Puzzle
+# expressions are injected into normal HTML text
 # and attribute contexts, while <script> and <style> embed their native
 # language grammars.
 name: Puzzle
@@ -18,11 +18,16 @@ file_extensions:
 first_line_match: '^\s*<puzzle-view(?=[\s/>])'
 
 variables:
-  # A component tag name is a member path — Ident('.'Ident)*, each segment an
-  # identifier, capitalized at the root (D167). Codegen emits the name verbatim
-  # as a JS member expression, so <Frame.Wrapper> is a component family member
-  # and the whole dotted name carries the component scope.
-  puzzle_component_name: '[[:upper:]][[:alnum:]_]*(?:\.[[:alpha:]_][[:alnum:]_]*)*'
+  # A component tag name is a member path — Ident('.'Ident)*, each segment a
+  # '$'-free JavaScript identifier (D167). Codegen emits the name verbatim as a
+  # JS member expression, so <Frame.Wrapper> is a component family member and
+  # the whole dotted name carries the component scope. A tag is a component
+  # when its first character is anything but an ASCII lowercase letter:
+  # <Card>, <Übersicht>, <概要>, <ärmel> and <_x> are components, while
+  # <straße-karte> is an element (HTML's own tag rules claim it).
+  puzzle_tag_id_start: '[_\p{L}\p{Nl}]'
+  puzzle_tag_id_continue: '[_\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]'
+  puzzle_component_name: '(?![a-z]){{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*(?:\.{{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*)*'
   # Composition markers are reserved capitalized tags, matched ahead of the
   # generic component name so <Slot>/<Children>/<Portal>/<Snippet> never fall
   # through to it. They are exact-match names: {{tag_name_break}} is
@@ -40,6 +45,10 @@ variables:
   # <template> likewise stays an ordinary HTML element with no marker meaning.
   puzzle_marker_name: '(?:Children|Slot|Portal|Snippet)'
   puzzle_invalid_marker_name: '(?:children|slot|portal)'
+  # HTML's void elements. The start tag is the whole element, with or without
+  # the slash (<br>, <br/>, <input …>), so a closing tag has nothing to close
+  # and is a compile error. Exact lowercase names only: <Input> is a component.
+  puzzle_void_element: '(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)'
   # Runtime directives the compiler intercepts: they never reach the DOM.
   puzzle_directive_attribute: '(?:key|island|ref|flip)'
   puzzle_identifier: '[_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*'
@@ -61,9 +70,9 @@ contexts:
     - include: puzzle-style-tags
 
   # HTML deliberately excludes prototypes from several string and tag
-  # contexts. Inject Puzzle expressions into each of the same extension points
-  # used by Sublime's Svelte syntax so interpolation works consistently in
-  # text, class/id/href values, generic values, and CDATA.
+  # contexts. Inject Puzzle expressions into each of HTML's extension points
+  # so interpolation works consistently in text, class/id/href values,
+  # generic values, and CDATA.
   cdata-content:
     - meta_prepend: true
     - include: puzzle-embedded
@@ -76,7 +85,7 @@ contexts:
   strings-common-content:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
   # A capitalized tag is always a Puzzle marker or component, even when its
   # name is also an HTML element. HTML matches its own tag lists
@@ -98,6 +107,7 @@ contexts:
     - include: puzzle-components
     - include: puzzle-section-tags
     - include: puzzle-invalid-markers
+    - include: puzzle-void-close-tags
 
   # HTML reaches `tag-other` only from `tag`, which only `html`/`main` include,
   # so this prepend is the top-level text scan.
@@ -114,12 +124,12 @@ contexts:
   tag-generic-attribute-name:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
   tag-attribute-value-content:
     - meta_prepend: true
     - include: puzzle-invalid-raw
-    - include: puzzle-embedded
+    - include: puzzle-embedded-attribute
 
 ###[ PUZZLE SECTIONS ]#########################################################
 
@@ -245,6 +255,16 @@ contexts:
         2: invalid.illegal.marker.puzzle
       push: tag-other-content
 
+  # A void element's closing tag (</br>, </input>) is a compile error, in
+  # template text and in a {#raw} body alike: HTML stays structural there.
+  # Case-sensitive on purpose, like the marker spellings above.
+  puzzle-void-close-tags:
+    - match: '(</)({{puzzle_void_element}}{{tag_name_break}})'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: invalid.illegal.void-close-tag.puzzle
+      push: tag-other-content
+
 ###[ EVENT ATTRIBUTES ]########################################################
 
   # Native HTML embeds CSS inside style="...", but its CSS context knows
@@ -337,11 +357,12 @@ contexts:
       pop: 1
     - include: immediately-pop
 
-  # An @event value is a handler body, not a template value position: the
-  # compiler takes it verbatim as JavaScript and never runs the formatter
-  # chain over it, so `@click={ a | b }` is a bitwise OR. The brace-only form
-  # is the only legal spelling (`={ ... }`); anything else falls back to the
-  # generic HTML value so an erroneous quoted value still reads as a string.
+  # An @event value is a handler: a call to one of the view's methods with
+  # data arguments, `event` in scope. It reads as plain JavaScript through
+  # JavaScript (for Puzzle handlers), which flags only `|` and `this`: no
+  # library scope and no markup-function rule. The brace-only form is the only
+  # legal spelling (`={ ... }`); anything else falls back to the generic HTML
+  # value so an erroneous quoted value still reads as a string.
   puzzle-event-attribute-assignment:
     - meta_include_prototype: false
     - match: '='
@@ -363,11 +384,29 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#expressions
+    - include: scope:source.js.embedded.puzzle-handler#expressions
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 
+  # Two entry points share every rule but the last. puzzle-embedded serves
+  # text positions (template text, CDATA); puzzle-embedded-attribute serves
+  # attribute names and values, quoted and brace-only alike — which covers
+  # component props, marker arguments, key= and flip= — and the style="…" CSS.
+  # They differ only in the interpolation they open: the markup functions
+  # `raw` and `newline_to_br` are legal in a text interpolation alone (D176).
   puzzle-embedded:
+    - include: puzzle-embedded-common
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      push: puzzle-interpolation-body
+
+  puzzle-embedded-attribute:
+    - include: puzzle-embedded-common
+    - match: '\{'
+      scope: punctuation.section.embedded.begin.puzzle
+      push: puzzle-attribute-interpolation-body
+
+  puzzle-embedded-common:
     # `\{` and `\}` produce a literal brace and open nothing. Matched first so
     # the escape wins over {##, {#comment, {#raw and the bare `{` below.
     #
@@ -380,7 +419,7 @@ contexts:
     #
     # The two positions where it is NOT live never reach here. A brace-only
     # value (`data-x={ … }`) is a JS expression: buildAttr makes it a
-    # DynamicAttr and the grammar hands it to puzzle-interpolation-body, which
+    # DynamicAttr and the grammar hands it to an interpolation body, which
     # does not include this context. A {#raw} body and its attributes are
     # verbatim bytes (lexRawText does no backslash handling; buildAttr
     # short-circuits every Raw token to a literal StaticAttr), and the
@@ -416,10 +455,11 @@ contexts:
       push:
         - puzzle-directive-body
         - puzzle-directive-begin
-    - match: '\{'
-      scope: punctuation.section.embedded.begin.puzzle
-      push: puzzle-interpolation-body
 
+  # Pops back to puzzle-directive-body, which reads the header — an {#if},
+  # {:else if}, {#unless} or {#case} condition, a {#for} header, a {:when}
+  # value — as an attribute-side expression: a markup function is flagged
+  # there as in any non-text position.
   puzzle-directive-begin:
     - meta_include_prototype: false
     - match: '(#)(if|unless|case)\b'
@@ -427,14 +467,11 @@ contexts:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
       pop: 1
-    # The {#for} header and {:when} values take no formatter chain (D173 V1):
-    # a top-level `|` in either is a compile error, so they get the no-pipe
-    # body, which sits on top of puzzle-directive-body until the closing `}`.
     - match: '(#)(for)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.loop.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(#)(svg)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -460,7 +497,7 @@ contexts:
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(:)(else)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -489,14 +526,7 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-expressions
-
-  # Parked on puzzle-directive-body, whose meta scopes still apply, and pops
-  # without consuming the `}` so that context closes the directive as usual.
-  puzzle-directive-nopipe-body:
-    - match: '(?=\})'
-      pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-nopipe-expressions
+    - include: scope:source.js.embedded.puzzle#expressions
 
   puzzle-interpolation-body:
     - clear_scopes: 1
@@ -507,11 +537,20 @@ contexts:
       pop: 1
     - include: scope:source.js.embedded.puzzle#puzzle-expressions
 
+  puzzle-attribute-interpolation-body:
+    - clear_scopes: 1
+    - meta_scope: meta.interpolation.puzzle
+    - meta_content_scope: source.js.embedded.puzzle
+    - match: '\}'
+      scope: punctuation.section.embedded.end.puzzle
+      pop: 1
+    - include: scope:source.js.embedded.puzzle#expressions
+
 ###[ RAW BLOCK ]##############################################################
 
   # {#raw} … {/raw} (D150) is a text-position block whose body the compiler
   # never lexes as template grammar. Braces are inert inside it — no
-  # interpolation, no block tags, no formatter pipes, no @event bindings, and
+  # interpolation, no block tags, no expressions, no @event bindings, and
   # \{ is not an escape — but HTML stays structural: <b> is a real element.
   #
   # That combination is why the body cannot reuse HTML's own tag contexts. This
@@ -555,6 +594,11 @@ contexts:
   # below. <script> and <style> are absent on purpose: HTML embeds JavaScript
   # and CSS in them, and nothing inside a raw body is a live language.
   puzzle-raw-tags:
+    - match: '(</)({{puzzle_void_element}}{{tag_name_break}})'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: invalid.illegal.void-close-tag.puzzle
+      push: puzzle-raw-tag-content
     - match: '(</?)({{html_structure_tags}})'
       captures:
         1: punctuation.definition.tag.begin.html
@@ -585,9 +629,9 @@ contexts:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.inline.table.html
       push: puzzle-raw-tag-content
-    # Everything else — including <Portal>, <Slot/> and <Card/>, which are
-    # plain elements here rather than markers or components.
-    - match: '(</?)({{tag_name}})'
+    # Everything else — including <Portal>, <Slot/>, <Card/> and <Übersicht/>,
+    # which are plain elements here rather than markers or components.
+    - match: '(</?)((?:{{tag_name_start}}|(?![\x00-\x7F]){{puzzle_tag_id_start}}){{tag_name_char}}*)'
       captures:
         1: punctuation.definition.tag.begin.html
         2: entity.name.tag.other.html
