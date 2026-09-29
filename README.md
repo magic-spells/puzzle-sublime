@@ -5,34 +5,30 @@ Version **0.4.0** — tracks the Puzzle **0.8.0** template grammar.
 
 New in 0.8.0:
 
-- Formatter chains in every value position (D173) — brace-only attribute
-  values (`title={ price | currency }`), component props and marker arguments,
-  alongside text and quoted-attribute interpolation
-- Template values are a data language (D176): paths, literals and operators,
-  with `.size` for a count, `??` for a fallback and `this.` as the door into the
-  view's JavaScript. They are highlighted as JavaScript expressions
-- Only a top-level single `|` is a pipe. There is no bitwise OR in templates, so
-  a single `|` nested inside parentheses, brackets, an object literal or a
-  formatter's arguments (`{ (a | b) }`, `{ x | f(a | b) }`) is a compile error
-  and is flagged as one, as is a single `|` in an `@event` handler body; `||`
-  stays logical OR everywhere, and `|=` stays assignment in a handler
-- Formatter names are strict: an identifier, optionally kebab-case where every
-  `-` starts a word with a letter (`blank-ish`). A pipe followed by anything
-  else (`| bit-1`, `| fmt.eur`, `| 0`) is flagged
-- The markup formatters `raw` and `newline_to_br` are legal only as the last
-  formatter of a text interpolation, with no arguments (`{ html | raw }`,
-  `{ x | trim | raw }`; empty parentheses, `raw()`, count as none). Followed by
-  another formatter, given arguments, or used in an attribute value, prop,
-  marker argument, `key=` or `flip=`, the name is flagged as a compile error
-- Block headers take no formatter chain: a pipe in an `{#if}`, `{:else if}`,
-  `{#unless}` or `{#case}` condition (including an inline `{#if}` in a quoted
-  attribute value), a `{#for}` header or a `{:when}` value is a compile error
-  and is flagged as one. Compute the value in `data()` and test that field
-  (`{#if hasTags}`); `||` stays logical OR there
-- A pipe not followed by a formatter name is flagged as a compile error too
-  (`{ w / 2 | 0 }`, `{ x |= 2 }`, `{ x | f g }`, `{ x | f.g }`)
-- Object-literal arguments (`{ 'greeting' | t({ name: user.name }) }`) are
-  JavaScript, never a nested interpolation
+- Template expressions are JavaScript-shaped (D176) and are highlighted as
+  JavaScript: function calls (`{ currency(price) }`), method calls
+  (`{ name.trim() }`), arrow functions as arguments
+  (`{#for t in todos.filter(t => !t.done)}`), template literals, object and
+  array literals (`{ t('cart.count', { count: items.length }) }`), `??` and `?.`
+- The function library gets its own scope when called bare: `round`,
+  `currency`, `percentage`, `number_with_delimiter`, `compact_number`,
+  `pluralize`, `capitalize`, `truncate`, `strip_html`, `strip_newlines`,
+  `escape`, `raw`, `newline_to_br`, `json`, `date`, `time`, `datetime`,
+  `in_timezone`, `t`, `link` and `timeago`. A bare read of the same name is
+  data, and `x.date()` is a method, so neither gets it. An `@event` handler's
+  own call names the view's handler (`@click={ save(item) }`), so it keeps
+  JavaScript's call scope; a bare call in its arguments is a library call
+- A single `|` is a compile error in every template expression — text,
+  attribute values, props, marker arguments, `key=`, `flip=`, block headers and
+  `@event` handlers — and is flagged: there is no pipe and no bitwise OR. `||`
+  stays logical OR, and a `|` inside a string or a template literal's text is
+  text
+- `this` is a compile error in every template expression, `@event` handlers
+  included, and is flagged; a property named `this` (`x.this`) is not
+- `raw(…)` and `newline_to_br(…)` are legal only as the whole of a text
+  interpolation (`{ raw(post.html) }`). Called in an attribute value, prop,
+  marker argument, `key=`, `flip=`, `style`, block header or handler argument,
+  or nested inside another call in a text interpolation, the name is flagged
 
 New in 0.7.0:
 
@@ -42,10 +38,10 @@ New in 0.7.0:
 - The `\{` / `\}` brace escape, which renders a literal brace instead of opening
   an interpolation — in template text and in attribute values alike
 
-The package follows the same composition model as Sublime's Svelte syntax:
+The package is composed from Sublime's own grammars:
 
 - `<puzzle-view>` and `<puzzle-skeleton>` extend Sublime's complete HTML grammar
-  and add Puzzle's Svelte/Liquid-style template expressions.
+  and add Puzzle's template expressions.
 - `<script>` embeds Sublime's JavaScript grammar.
 - `<script lang="ts">` embeds Sublime's TypeScript grammar.
 - `<style>` and `<style scoped>` embed Sublime's CSS grammar.
@@ -58,15 +54,13 @@ the entire file.
 
 Both template sections support:
 
-- Expression interpolation: `{ user.name }`, `{ todos.size }`,
-  `{ subtitle ?? 'Untitled' }`, `{ this.ago(createdAt) }`
-- Formatter chains: `{ price | currency('$', 2) | trim }`, in every value
-  position — text and attribute interpolation, brace-only attribute values
-  (`title={ price | currency }`), component props and marker arguments. Block
-  headers (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`)
-  take none: a pipe there is flagged as an error, as is a pipe nested inside
-  brackets
-- Object-literal formatter arguments: `{ 'cart.count' | t({ count: n }) }`
+- Expression interpolation: `{ user.name }`, `{ items.length }`,
+  `{ subtitle ?? 'Untitled' }`, `{ currency(price) }`,
+  `{ truncate(post.body, 120) }`, `` { `${first} ${last}` } ``
+- Function calls in every position: text and attribute interpolation,
+  brace-only attribute values (`title={ currency(price) }`), component props,
+  marker arguments and block headers (`{#if items.some(i => i.done)}`)
+- Object-literal arguments: `{ t('cart.count', { count: n }) }`
 - Conditionals: `{#if}`, `{:else if}`, `{:else}`, `{/if}`
 - Inverted conditionals: `{#unless}` and `{/unless}`
 - Multi-branch control flow: `{#case}`, `{:when}`, `{:else}`, `{/case}`
@@ -90,7 +84,7 @@ HTML comments intentionally suppress Puzzle expressions, so examples like
 `<!-- {#if documentedExample} -->` remain comments.
 
 A `{#raw}` body is highlighted the way the compiler reads it: braces are inert
-there — no interpolation, block tags, formatter pipes or `@event` bindings —
+there — no interpolation, block tags, expressions or `@event` bindings —
 while HTML stays structural, so `<b>` is still an element and `<Slot/>` is a
 plain tag rather than a marker. Lowercase `<slot>`, `<children>` and `<portal>`
 are compile errors outside a raw block and are flagged as such. A lowercase
@@ -147,28 +141,39 @@ saved `.sublime-syntax` files without reinstalling the package.
 | Directive attribute | `entity.other.attribute-name.directive.puzzle` |
 | Raw block body | `meta.block.raw.puzzle` |
 | Interpolation | `meta.interpolation.puzzle` |
-| Formatter pipe | `keyword.operator.formatter.puzzle` |
-| Formatter name | `variable.function.formatter.puzzle` |
+| Library function called bare | `support.function.library.puzzle` |
 | Event/action sigil (`@`) | `keyword.operator.event.puzzle` |
 | Event/action name | `entity.other.attribute-name.event.puzzle` |
 | Event modifier | `support.constant.event-modifier.puzzle` |
 | Brace escape (`\{`, `\}`) | `constant.character.escape.puzzle` |
 | Invalid modifier/directive | `invalid.illegal.*.puzzle` |
-| `raw` / `newline_to_br` anywhere but the end of a text interpolation's chain, or with arguments | `invalid.illegal.markup-formatter.puzzle` |
-| Pipe in a block header (`{#if}`, `{:else if}`, `{#unless}`, `{#case}`, `{#for}`, `{:when}`), nested inside brackets, in an `@event` handler, or not followed by a formatter name | `invalid.illegal.formatter.puzzle` |
+| A single `\|` in a template expression | `invalid.illegal.pipe.puzzle` |
+| `this` in a template expression | `invalid.illegal.this.puzzle` |
+| `raw(…)` / `newline_to_br(…)` anywhere but the whole of a text interpolation | `invalid.illegal.markup-function.puzzle` |
 
 ## Tests
 
-Open `tests/syntax_test_puzzle.pzl` in Sublime and run:
+Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-567 assertions covering the HTML template grammar, every shipped Puzzle
-directive, formatter chains in every value position (and the positions where a
-pipe is an error), strict formatter names, markup-formatter placement,
-data-language expressions, event modifiers, composition markers and their
-arguments, brace escapes, raw blocks, and the JavaScript, TypeScript and CSS
-section boundaries.
+- `tests/syntax_test_puzzle.pzl` — 513 assertions covering the HTML template
+  grammar, every shipped Puzzle directive, the expression rules (calls,
+  methods, arrow-function arguments, template literals, the function library,
+  and where `|`, `this`, `raw` and `newline_to_br` are errors), event
+  modifiers, composition markers and their arguments, brace escapes, raw
+  blocks, and the JavaScript, TypeScript and CSS section boundaries.
+- `tests/syntax_test_conformance.pzl` — generated from the Puzzle expression
+  conformance table (`packages/puzzle-lang/conformance/expressions-parse.json`
+  in the Puzzle repository). Every expression the compiler accepts is written
+  into a text interpolation, a brace-only attribute value, a quoted attribute
+  value, an `{#if}` header and an `@event` handler, and asserted to carry no
+  `invalid` scope and to close on the right brace — 186 cases, 2759
+  assertions. Regenerate it after the table changes:
+
+  ```bash
+  python3 tests/generate_conformance_test.py path/to/expressions-parse.json
+  ```
 
 The runner is Sublime's own — there is no external CLI — but it can be driven
 without touching the UI, provided this repository is symlinked into `Packages/`
@@ -193,24 +198,20 @@ inside the template embeds JavaScript, and a `{#raw}` block written inside it is
 highlighted as JavaScript rather than as a raw body. Raw blocks in ordinary
 template text are unaffected.
 
-The data-language rules (D176) are the compiler's to enforce. A template value
-is highlighted with JavaScript's own scopes, so `.length`, a call on a value
-(`draft.trim()`), an arrow function, a template literal, `new`, `typeof`,
-`++`, assignment or a bitwise operator other than `|` reads as JavaScript
-rather than as an error; the compiler reports each with a positioned message.
-Likewise which formatter names exist is a compile-time check: every
-well-formed name after a pipe gets the formatter scope. Of the expression
-rules, only the pipe and formatter-placement rules are flagged. One
-markup-formatter rule is left to the compiler as well: `raw` or
-`newline_to_br` inside a text-only element (`<textarea>`, `<title>`,
-`<script>`, …) or inside `<svg>`/`<math>` is an error the grammar does not
-track, and a text interpolation whose chain continues onto the next line
-after `raw` is not flagged, since the grammar reads one line at a time.
+The expression language (D176) is the compiler's to enforce beyond the three
+rules above. An expression is highlighted with JavaScript's own scopes, so a
+method the method table does not list, `.size`, `new`, `typeof`, `**`,
+`++`, assignment, a regex literal, spread or an excluded global reads as
+JavaScript rather than as an error; the compiler reports each with a
+positioned message. Which bare calls resolve is a compile-time check too: an
+app function registered through the `formatters` config keeps JavaScript's
+function-call scope, since the grammar cannot know its name.
 
-Formatter pipes follow the compiler's top-level rule by grammar structure, not
-by counting brackets. A pipe after a ternary's last branch
-(`{ on ? a : b | upcase }`) is a formatter; one in the middle branch
-(`{ a ? b | x : c }`) is flagged, since the compiler splits there and rejects
-`x : c` as a formatter name. One edge differs: inside an `@event` handler, a
-`|` in a template literal's `${…}` substitution is flagged, where the compiler
-treats the whole template literal as text.
+The `raw` / `newline_to_br` rule is best-effort. The grammar treats the first
+token of a text interpolation as its outermost call, so `{ raw(a) + b }` is
+not flagged, and `{ (raw(a)) }` is flagged although the compiler accepts it.
+The rule is also not tracked inside a text-only element (`<textarea>`,
+`<title>`, …) or inside `<svg>`/`<math>`, where the compiler rejects it. In an
+`@event` handler, the handler's own call — the first token, or the first
+token of each branch of a top-level conditional — is a view handler, so
+`@click={ raw(h) }` is not flagged.

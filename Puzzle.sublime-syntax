@@ -2,8 +2,8 @@
 ---
 # Puzzle single-file components (.pzl) for Sublime Text 4.
 #
-# The template sections extend Sublime's complete HTML grammar, just like the
-# Svelte package does. Puzzle expressions are injected into normal HTML text
+# The template sections extend Sublime's complete HTML grammar. Puzzle
+# expressions are injected into normal HTML text
 # and attribute contexts, while <script> and <style> embed their native
 # language grammars.
 name: Puzzle
@@ -61,9 +61,9 @@ contexts:
     - include: puzzle-style-tags
 
   # HTML deliberately excludes prototypes from several string and tag
-  # contexts. Inject Puzzle expressions into each of the same extension points
-  # used by Sublime's Svelte syntax so interpolation works consistently in
-  # text, class/id/href values, generic values, and CDATA.
+  # contexts. Inject Puzzle expressions into each of HTML's extension points
+  # so interpolation works consistently in text, class/id/href values,
+  # generic values, and CDATA.
   cdata-content:
     - meta_prepend: true
     - include: puzzle-embedded
@@ -337,13 +337,11 @@ contexts:
       pop: 1
     - include: immediately-pop
 
-  # An @event value is a handler body, not a template value position: the
-  # compiler takes it verbatim as JavaScript and never runs the formatter
-  # chain over it. It is still written in a template, though, so a single `|`
-  # there is a compile error rather than a bitwise OR (D176), and the embedded
-  # grammar flags it; `||` and `|=` stay JavaScript. The brace-only form
-  # is the only legal spelling (`={ ... }`); anything else falls back to the
-  # generic HTML value so an erroneous quoted value still reads as a string.
+  # An @event value is a handler: a template expression (D176) with `event` in
+  # scope, whose own call names a view handler rather than a library function
+  # (puzzle-handler-expressions). The brace-only form is the only legal
+  # spelling (`={ ... }`); anything else falls back to the generic HTML value
+  # so an erroneous quoted value still reads as a string.
   puzzle-event-attribute-assignment:
     - meta_include_prototype: false
     - match: '='
@@ -365,7 +363,7 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#expressions
+    - include: scope:source.js.embedded.puzzle#puzzle-handler-expressions
 
 ###[ TEMPLATE EXPRESSIONS ]####################################################
 
@@ -373,8 +371,8 @@ contexts:
   # text positions (template text, CDATA); puzzle-embedded-attribute serves
   # attribute names and values, quoted and brace-only alike — which covers
   # component props, marker arguments, key= and flip= — and the style="…" CSS.
-  # They differ only in the interpolation they open: the markup formatters
-  # `raw` and `newline_to_br` are legal in a text interpolation alone (D174).
+  # They differ only in the interpolation they open: the markup functions
+  # `raw` and `newline_to_br` are legal in a text interpolation alone (D176).
   puzzle-embedded:
     - include: puzzle-embedded-common
     - match: '\{'
@@ -437,27 +435,22 @@ contexts:
         - puzzle-directive-body
         - puzzle-directive-begin
 
+  # Pops back to puzzle-directive-body, which reads the header — an {#if},
+  # {:else if}, {#unless} or {#case} condition, a {#for} header, a {:when}
+  # value — as an attribute-side expression: a markup function is flagged
+  # there as in any non-text position.
   puzzle-directive-begin:
     - meta_include_prototype: false
-    # Block headers take no formatter chain (D173 V1): a top-level `|` in an
-    # {#if}, {:else if}, {#unless} or {#case} condition, a {#for} header or a
-    # {:when} value is a compile error — formatters belong in value positions,
-    # not in logic. Each of these headers gets the no-pipe body, which sits on
-    # top of puzzle-directive-body until the closing `}`. `||` stays logical
-    # OR, a `|` inside a string is text, and a `|` inside parentheses or
-    # brackets is the nested-pipe error, as in every value position (D176).
-    # This covers the inline {#if} in a quoted attribute value too, which
-    # reaches this context through puzzle-embedded like any other directive.
     - match: '(#)(if|unless|case)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(#)(for)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.loop.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(#)(svg)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -478,12 +471,12 @@ contexts:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.else.puzzle
         4: keyword.control.conditional.if.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(:)(when)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
         2: keyword.control.conditional.puzzle
-      set: puzzle-directive-nopipe-body
+      pop: 1
     - match: '(:)(else)\b'
       captures:
         1: punctuation.definition.keyword.puzzle
@@ -512,14 +505,7 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-expressions
-
-  # Parked on puzzle-directive-body, whose meta scopes still apply, and pops
-  # without consuming the `}` so that context closes the directive as usual.
-  puzzle-directive-nopipe-body:
-    - match: '(?=\})'
-      pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-nopipe-expressions
+    - include: scope:source.js.embedded.puzzle#expressions
 
   puzzle-interpolation-body:
     - clear_scopes: 1
@@ -537,13 +523,13 @@ contexts:
     - match: '\}'
       scope: punctuation.section.embedded.end.puzzle
       pop: 1
-    - include: scope:source.js.embedded.puzzle#puzzle-attribute-expressions
+    - include: scope:source.js.embedded.puzzle#expressions
 
 ###[ RAW BLOCK ]##############################################################
 
   # {#raw} … {/raw} (D150) is a text-position block whose body the compiler
   # never lexes as template grammar. Braces are inert inside it — no
-  # interpolation, no block tags, no formatter pipes, no @event bindings, and
+  # interpolation, no block tags, no expressions, no @event bindings, and
   # \{ is not an escape — but HTML stays structural: <b> is a real element.
   #
   # That combination is why the body cannot reuse HTML's own tag contexts. This
