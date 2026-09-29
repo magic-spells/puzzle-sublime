@@ -879,7 +879,8 @@ const insideRaw = 1;
 ##                                                                     ^ source.js.embedded.puzzle
 ##                                                                         ^^^^^^^^ entity.other.attribute-name.html - invalid
 ##                                                                                       ^^^^^ source.js.embedded.puzzle
-    <input type="text"></input> <p>a<br>b</br></p> </img> </wbr> <hr></hr>
+    <input type="text"></input> <p>a<br>b</br></p> </img> </wbr> <hr></hr> </hr >
+##                                                                           ^^ invalid.illegal.void-close-tag.puzzle
 ##                       ^^^^^ invalid.illegal.void-close-tag.puzzle
 ##                                         ^^ invalid.illegal.void-close-tag.puzzle
 ##                                                   ^^^ invalid.illegal.void-close-tag.puzzle

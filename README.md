@@ -176,7 +176,7 @@ Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-- `tests/syntax_test_puzzle.pzl` — 563 assertions covering the HTML template
+- `tests/syntax_test_puzzle.pzl` — 564 assertions covering the HTML template
   grammar, every shipped Puzzle directive, the expression rules (calls,
   methods, arrow-function arguments, template literals, the function library,
   and where `|`, `this`, `raw` and `newline_to_br` are errors), event
