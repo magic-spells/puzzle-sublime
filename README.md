@@ -1,7 +1,18 @@
 # Puzzle syntax for Sublime Text
 
 Sublime Text 4 syntax highlighting for Puzzle single-file components (`.pzl`).
-Version **0.4.0** — tracks the Puzzle **0.8.0** template grammar.
+Version **0.5.0** — tracks the Puzzle **0.9.0** template grammar.
+
+New in 0.9.0:
+
+- The `passive` and `capture` event modifiers (D187), alone or combined with
+  the others: `@wheel:passive={ … }`, `@click:capture:once={ … }`,
+  `@pointerdown:outside:capture={ … }`. The dotted spelling
+  (`@wheel.passive`) is flagged like every other dotted modifier
+- Spread attributes on a component, `{...expr}` in attribute position:
+  `<Card {...props} title="x">`, `<Component is={ cards[t] } {...embed.props}>`.
+  The braces read as an interpolation and the leading `...` as JavaScript's
+  spread operator
 
 New in 0.8.0:
 
@@ -82,7 +93,9 @@ Both template sections support:
 - Dynamic attributes and expressions inside quoted attributes
 - Directive attributes: `key`, `island`, `ref`, `flip`
 - Event bindings and modifiers such as `@click:prevent:stop={ open(event) }`,
-  including the event-generic `@click:outside`
+  including the event-generic `@click:outside` and the listener options
+  `@wheel:passive` and `@click:capture`
+- Component spread attributes: `<Card {...props} title="x">`
 - Composition markers — `<Children>`, `<Slot>`, `<Portal>` and `<Snippet>` — in
   both the self-closing and the paired fallback-body spelling
 - Marker arguments — `<Children user={ user }>`, `<Slot name="row" user={ user }>`
@@ -178,11 +191,12 @@ Open a file under `tests/` in Sublime and run:
 
 **Command Palette → Build With: Syntax Tests**
 
-- `tests/syntax_test_puzzle.pzl` — 564 assertions covering the HTML template
+- `tests/syntax_test_puzzle.pzl` — 674 assertions covering the HTML template
   grammar, every shipped Puzzle directive, the expression rules (calls,
   methods, arrow-function arguments, template literals, the function library,
   and where `|`, `this`, `raw` and `newline_to_br` are errors), event
-  modifiers, composition markers and their arguments, brace escapes, raw
+  modifiers including `passive` and `capture`, component spread attributes,
+  composition markers and their arguments, brace escapes, raw
   blocks (including section close tags inside a raw body), void elements, and
   the JavaScript, TypeScript and CSS section boundaries.
 - `tests/syntax_test_conformance.pzl` — generated from the Puzzle expression
@@ -190,7 +204,7 @@ Open a file under `tests/` in Sublime and run:
   in the Puzzle repository). Every expression the compiler accepts is written
   into a text interpolation, a brace-only attribute value, a quoted attribute
   value, an `{#if}` header and an `@event` handler, and asserted to carry no
-  `invalid` scope and to close on the right brace — 186 cases, 2759
+  `invalid` scope and to close on the right brace — 212 cases, 3149
   assertions. Regenerate it after the table changes:
 
   ```bash

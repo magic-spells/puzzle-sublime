@@ -52,9 +52,10 @@ variables:
   # Runtime directives the compiler intercepts: they never reach the DOM.
   puzzle_directive_attribute: '(?:key|island|ref|flip)'
   puzzle_identifier: '[_$\p{L}\p{Nl}][_$\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]*'
-  # The complete modifier set: four generic modifiers plus ten key filters.
-  # `outside` (v1.52, D86) is event-generic by design.
-  puzzle_event_modifier: '(?:prevent|stop|once|outside|enter|escape|tab|space|up|down|left|right|backspace|delete)'
+  # The complete modifier set: six generic modifiers plus ten key filters.
+  # `outside` (v1.52, D86) is event-generic by design; `passive` and `capture`
+  # (D187) pass native listener options and combine with the others.
+  puzzle_event_modifier: '(?:prevent|stop|once|outside|passive|capture|enter|escape|tab|space|up|down|left|right|backspace|delete)'
   puzzle_script_end: '(?=</script{{tag_name_break_char}})'
   puzzle_style_end: '(?=</style{{tag_name_break_char}})'
 
@@ -121,6 +122,9 @@ contexts:
     - include: puzzle-directive-attributes
     - include: puzzle-event-attributes
 
+  # A brace in attribute-name position is a component spread, `{...props}`
+  # (SpreadAttr). It opens an attribute interpolation, where JavaScript's own
+  # prefix-operator rule scopes the leading `...` as keyword.operator.spread.js.
   tag-generic-attribute-name:
     - meta_prepend: true
     - include: puzzle-invalid-raw
