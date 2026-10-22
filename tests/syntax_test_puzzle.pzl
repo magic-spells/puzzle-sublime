@@ -399,6 +399,62 @@
     ##         ^^^^^^^^ invalid.illegal.event-modifier.puzzle
 
 
+    ## --- The passive and capture event modifiers (D187) ---
+
+    <div @wheel:passive={ onWheel(event) } @click:capture:once={ grab(event) }>
+    ##   ^ keyword.operator.event.puzzle
+    ##    ^^^^^ entity.other.attribute-name.event.puzzle
+    ##         ^ punctuation.separator.modifier.puzzle
+    ##          ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                 ^ punctuation.separator.key-value.html
+    ##                                     ^ keyword.operator.event.puzzle
+    ##                                      ^^^^^ entity.other.attribute-name.event.puzzle
+    ##                                           ^ punctuation.separator.modifier.puzzle
+    ##                                            ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                                                   ^ punctuation.separator.modifier.puzzle
+    ##                                                    ^^^^ support.constant.event-modifier.puzzle
+    </div>
+
+    <div @pointerdown:outside:capture={ close } @touchmove:passive:once={ drag(event) }></div>
+    ##               ^ punctuation.separator.modifier.puzzle
+    ##                ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                       ^ punctuation.separator.modifier.puzzle
+    ##                        ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                                                     ^^^^^^^ support.constant.event-modifier.puzzle
+    ##                                                             ^^^^ support.constant.event-modifier.puzzle
+
+    <div @wheel.passive={ broken } @click.capture={ broken }></div>
+    ##         ^^^^^^^^ invalid.illegal.event-modifier.puzzle
+    ##                                   ^^^^^^^^ invalid.illegal.event-modifier.puzzle
+
+
+    ## --- Spread attributes on a component: {...expr} ---
+
+    <Card {...props} title="x"/>
+    ##    ^ punctuation.section.embedded.begin.puzzle
+    ##    ^^^^^^^^^^ meta.interpolation.puzzle - entity.other.attribute-name
+    ##     ^^^ keyword.operator.spread.js
+    ##        ^^^^^ variable.other.readwrite.js
+    ##             ^ punctuation.section.embedded.end.puzzle
+    ##               ^^^^^ entity.other.attribute-name.html
+
+    <Component is={ cards[t] } {...embed.props}>x</Component>
+    ##                         ^ punctuation.section.embedded.begin.puzzle
+    ##                          ^^^ keyword.operator.spread.js
+    ##                             ^^^^^ variable.other.readwrite.js
+    ##                                  ^ punctuation.accessor.js
+    ##                                   ^^^^^ meta.property.object.js
+    ##                                        ^ punctuation.section.embedded.end.puzzle
+    ##                                         ^ punctuation.definition.tag.end.html
+    ##                         ^^^^^^^^^^^^^^^^ - invalid
+
+    <Card { ...base } {...extra}/>
+    ##      ^^^ keyword.operator.spread.js
+    ##         ^^^^ variable.other.readwrite.js
+    ##              ^ punctuation.section.embedded.end.puzzle
+    ##                 ^^^ keyword.operator.spread.js
+
+
     ## --- Raw blocks (D150) --- braces inert, HTML still structural
 
     {#raw}{ "loop": true } {#if x}{:else}{/if} { a | this }{/raw}
