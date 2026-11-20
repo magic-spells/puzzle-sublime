@@ -205,13 +205,25 @@
     </Children>
     ##^^^^^^^^ entity.name.tag.marker.puzzle
 
-    <Slot>{ number_with_delimiter(count) } left{#svg 'icons/empty.svg'}</Slot>
-##   ^^^^ entity.name.tag.marker.puzzle
-##          ^^^^^^^^^^^^^^^^^^^^^ support.function.library.puzzle
-##                                ^^^^^ source.js.embedded.puzzle
-##                                         ^^^^ - source.js.embedded.puzzle
-##                                               ^^^ support.function.inline-svg.puzzle
-##                                                                       ^^^^ entity.name.tag.marker.puzzle
+    ## <Outlet> (D199) is the router outlet, the 0.10 name for a bare <Slot/>
+    ## in a layout or view. paired, its body is live fallback content.
+    <Outlet>{ number_with_delimiter(count) } left{#svg 'icons/empty.svg'}</Outlet>
+##   ^^^^^^ entity.name.tag.marker.puzzle
+##   ^^^^^^ - entity.name.tag.component.puzzle
+##            ^^^^^^^^^^^^^^^^^^^^^ support.function.library.puzzle
+##                                  ^^^^^ source.js.embedded.puzzle
+##                                           ^^^^ - source.js.embedded.puzzle
+##                                                 ^^^ support.function.inline-svg.puzzle
+##                                                                         ^^^^^^ entity.name.tag.marker.puzzle
+
+    <Outlet/>
+##   ^^^^^^ entity.name.tag.marker.puzzle
+##   ^^^^^^ - entity.name.tag.component.puzzle
+
+    ## a component whose name only starts with Outlet stays a component
+    <OutletFrame/>
+##   ^^^^^^^^^^^ entity.name.tag.component.puzzle
+##   ^^^^^^^^^^^ - entity.name.tag.marker.puzzle
 
     <Children/><Slot name="footer"/>
    ##^^^^^^^^ entity.name.tag.marker.puzzle
@@ -349,6 +361,12 @@
     ##            ^^^^^^^^ invalid.illegal.marker.puzzle
     ##                       ^^^^^^ invalid.illegal.marker.puzzle
     ##                                ^^^^^^ invalid.illegal.marker.puzzle
+
+    <outlet></outlet><outlet-frame>ok</outlet-frame>
+##   ^^^^^^ invalid.illegal.marker.puzzle
+##            ^^^^^^ invalid.illegal.marker.puzzle
+##                    ^^^^^^^^^^^^ - invalid.illegal.marker.puzzle
+##                    ^^^^^^^^^^^^ entity.name.tag.other.html
 
 
     ## --- Directive attributes --- intercepted by the compiler, never DOM
