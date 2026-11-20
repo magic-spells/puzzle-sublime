@@ -96,8 +96,10 @@ Both template sections support:
   including the event-generic `@click:outside` and the listener options
   `@wheel:passive` and `@click:capture`
 - Component spread attributes: `<Card {...props} title="x">`
-- Composition markers — `<Children>`, `<Slot>`, `<Portal>` and `<Snippet>` — in
-  both the self-closing and the paired fallback-body spelling
+- Composition markers — `<Children>`, `<Outlet>`, `<Slot>`, `<Portal>` and
+  `<Snippet>` — in both the self-closing and the paired fallback-body spelling.
+  `<Outlet>` (Puzzle 0.10, D199) is the router outlet in a layout or view, the
+  tag a bare `<Slot/>` used to be; `<Slot>` now always takes a `name`
 - Marker arguments — `<Children user={ user }>`, `<Slot name="row" user={ user }>`
   — and `<Snippet fits="row" user group>` bare parameter declarations (D166)
 - Component tags such as `<AlbumCard />`, including dotted component-family
@@ -111,8 +113,8 @@ HTML comments intentionally suppress Puzzle expressions, so examples like
 A `{#raw}` body is highlighted the way the compiler reads it: braces are inert
 there — no interpolation, block tags, expressions or `@event` bindings —
 while HTML stays structural, so `<b>` is still an element and `<Slot/>` is a
-plain tag rather than a marker. Lowercase `<slot>`, `<children>` and `<portal>`
-are compile errors outside a raw block and are flagged as such. A lowercase
+plain tag rather than a marker. Lowercase `<slot>`, `<children>`, `<outlet>`
+and `<portal>` are compile errors outside a raw block and are flagged as such. A lowercase
 `<snippet>` is deliberately not flagged: the compiler only steers it to
 `<Snippet>` when it carries `fits` or a bare parameter, so a plain one is
 ordinary markup.
@@ -240,7 +242,7 @@ method the method table does not list, `.size`, `new`, `typeof`, `**`,
 `++`, assignment, a regex literal, spread or an excluded global reads as
 JavaScript rather than as an error; the compiler reports each with a
 positioned message. Which bare calls resolve is a compile-time check too: an
-app function registered through the `formatters` config keeps JavaScript's
+app function registered through the `functions` config keeps JavaScript's
 function-call scope, since the grammar cannot know its name.
 
 The `raw` / `newline_to_br` rule is best-effort. The grammar treats the first
