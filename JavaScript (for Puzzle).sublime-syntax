@@ -33,8 +33,9 @@ extends: Packages/JavaScript/JavaScript.sublime-syntax
 
 variables:
   # The shipped function library: the standard set plus link and timeago.
-  # App functions registered through the formatters config are called the same
-  # way but are not known here, so they keep JavaScript's function-call scope.
+  # App functions registered through the functions config (formatters before
+  # Puzzle 0.10) are called the same way but are not known here, so they keep
+  # JavaScript's function-call scope.
   puzzle_library_function: |-
     (?x:
       round | currency | percentage | number_with_delimiter | compact_number

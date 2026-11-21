@@ -29,13 +29,13 @@ variables:
   puzzle_tag_id_continue: '[_\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\x{200C}\x{200D}]'
   puzzle_component_name: '(?![a-z]){{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*(?:\.{{puzzle_tag_id_start}}{{puzzle_tag_id_continue}}*)*'
   # Composition markers are reserved capitalized tags, matched ahead of the
-  # generic component name so <Slot>/<Children>/<Portal>/<Snippet> never fall
-  # through to it. They are exact-match names: {{tag_name_break}} is
+  # generic component name so <Slot>/<Children>/<Outlet>/<Portal>/<Snippet>
+  # never fall through to it. They are exact-match names: {{tag_name_break}} is
   # `(?=[\s/<>])`, so a dotted root like <Slot.Custom/> fails the marker rule
   # and falls through to the component rule (a compile error in the framework;
   # not flagged here).
   # The lowercase spellings are compile errors (D134/D144), never elements —
-  # <slot>, <children> and <portal> are rejected on sight. <snippet> is
+  # <slot>, <children>, <outlet> and <portal> are rejected on sight. <snippet> is
   # deliberately OUT of that list: the parser steers it to <Snippet> only when
   # it carries `fits` or a bare attribute (D166), so a plain
   # <snippet class="x">…</snippet> is ordinary markup and flagging it would
@@ -43,8 +43,8 @@ variables:
   # than matched with a lookahead, because the grammar cannot tell a bare
   # parameter from a valueless HTML attribute without parsing the whole tag.
   # <template> likewise stays an ordinary HTML element with no marker meaning.
-  puzzle_marker_name: '(?:Children|Slot|Portal|Snippet)'
-  puzzle_invalid_marker_name: '(?:children|slot|portal)'
+  puzzle_marker_name: '(?:Children|Outlet|Slot|Portal|Snippet)'
+  puzzle_invalid_marker_name: '(?:children|outlet|slot|portal)'
   # HTML's void elements. The start tag is the whole element, with or without
   # the slash (<br>, <br/>, <input …>), so a closing tag has nothing to close
   # and is a compile error. Exact lowercase names only: <Input> is a component.
@@ -225,8 +225,9 @@ contexts:
 
 ###[ COMPONENTS AND MARKERS ]##################################################
 
-  # <Children>, <Slot>, <Portal> and <Snippet> are reserved composition
-  # markers, not components: the compiler resolves them before component
+  # <Children>, <Outlet>, <Slot>, <Portal> and <Snippet> are reserved
+  # composition markers, not components (<Outlet> is the 0.10 router outlet,
+  # D199, the tag a bare <Slot/> used to be): the compiler resolves them before component
   # lookup, so they get their own scope. This has to run ahead of
   # puzzle-components (Slot also matches {{puzzle_component_name}}) and — like
   # puzzle-components — ahead of HTML's own tag rules, which match tag names
